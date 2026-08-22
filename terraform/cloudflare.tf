@@ -1,18 +1,12 @@
-resource "random_bytes" "tunnel_secret" {
-  length = 32
-}
-
 resource "cloudflare_zero_trust_tunnel_cloudflared" "erp" {
-  account_id    = var.cloudflare_account_id
-  name          = "teplotec-erp"
-  config_src    = "cloudflare"
-  tunnel_secret = random_bytes.tunnel_secret.base64
+  account_id = var.cloudflare_account_id
+  name       = "teplotec-erp"
+  config_src = "cloudflare"
 }
 
 resource "cloudflare_zero_trust_tunnel_cloudflared_config" "erp" {
   account_id = var.cloudflare_account_id
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.erp.id
-  source     = "cloudflare"
 
   config = {
     ingress = [
