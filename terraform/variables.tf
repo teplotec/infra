@@ -8,14 +8,40 @@ variable "cloudflare_zone_id" {
   type        = string
 }
 
-variable "access_allowed_emails" {
-  description = "Exact email addresses allowed through Cloudflare Access using one-time PIN."
+variable "access_trusted_emails" {
+  description = "Trusted ERP users. They receive the longest Cloudflare Access session."
   type        = list(string)
+  default     = []
+}
 
-  validation {
-    condition     = length(var.access_allowed_emails) > 0
-    error_message = "At least one email address must be allowed to access ERPNext."
-  }
+variable "access_staff_emails" {
+  description = "Regular ERP staff users."
+  type        = list(string)
+  default     = []
+}
+
+variable "access_guest_emails" {
+  description = "Temporary or external ERP users."
+  type        = list(string)
+  default     = []
+}
+
+variable "access_trusted_session_duration" {
+  description = "Cloudflare Access session duration for trusted ERP users."
+  type        = string
+  default     = "720h"
+}
+
+variable "access_staff_session_duration" {
+  description = "Cloudflare Access session duration for regular ERP staff."
+  type        = string
+  default     = "168h"
+}
+
+variable "access_guest_session_duration" {
+  description = "Cloudflare Access session duration for temporary or external ERP users."
+  type        = string
+  default     = "24h"
 }
 
 variable "ssh_public_key" {
