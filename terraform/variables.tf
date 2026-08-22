@@ -61,6 +61,12 @@ variable "erp_hostname" {
   default     = "erp.teplotec.com"
 }
 
+variable "ssh_hostname" {
+  description = "Cloudflare Access hostname for administrative SSH over the existing tunnel."
+  type        = string
+  default     = "ssh.teplotec.com"
+}
+
 variable "server_type" {
   description = "Hetzner Cloud server type."
   type        = string

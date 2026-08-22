@@ -8,26 +8,38 @@ The first workload is ERPNext at `https://erp.teplotec.com`.
 
 ```text
 Browser
-  -> Cloudflare Access (exact allowed emails, one-time PIN)
+  -> Cloudflare Access
+     -> Cloudflare account session for configured users
+     -> One-time PIN fallback
   -> Cloudflare Tunnel
   -> cloudflared on Hetzner CX33
   -> 127.0.0.1:8080
   -> ERPNext / Frappe Docker
      -> MariaDB
      -> Redis
+
+Administrator terminal
+  -> ssh.teplotec.com
+  -> Cloudflare Access
+  -> Cloudflare Tunnel
+  -> localhost:22
 ```
 
-The ERPNext HTTP port is bound to loopback only. Hetzner Firewall has no public inbound rules by default. SSH is also closed unless `ssh_allowed_cidrs` is explicitly configured.
+The ERP HTTP port is bound to loopback only. Hetzner Firewall has no public inbound rules by default. Public SSH ingress remains closed; administrative SSH is routed through Cloudflare Tunnel.
 
 ## Cloudflare Access sessions
 
-ERP access is split into three email tiers. Users do not need Cloudflare accounts; one-time PIN authentication is sent to the allowed email address.
+ERP access is split into three email tiers:
 
 - Trusted users: 30 days (`720h`)
 - Staff: 7 days (`168h`)
 - Guests / external users: 24 hours (`24h`)
 
-An email must belong to only one tier.
+Users can authenticate either with the Cloudflare identity provider or with the one-time PIN identity provider. A trusted user whose email is also a member of the TeploTEC Cloudflare account can use the existing Cloudflare session instead of receiving an email PIN.
+
+SSH only allows trusted emails and only exposes the Cloudflare identity provider. One-time PIN is intentionally not enabled for SSH.
+
+An email must belong to only one ERP tier.
 
 ## Pinned versions
 
@@ -38,11 +50,11 @@ An email must belong to only one tier.
 - Ubuntu 24.04
 - `frappe_docker` v3.2.1
 - ERPNext v16.31.1
-- cloudflared 2026.8.2
+- cloudflared 2026.8.2 on the server
 
 ## GitHub Actions configuration
 
-Use repository-level secrets and variables under `Settings -> Secrets and variables -> Actions`. Environment and organization secrets/variables are not required for this deployment.
+Use repository-level secrets and variables under `Settings -> Secrets and variables -> Actions`. Environment and organization secrets/variables are not required for the Terraform deployment.
 
 ### Repository secrets
 
@@ -113,7 +125,47 @@ cat ~/.ssh/teplotec.pub
 
 Put only the public key into `SSH_PUBLIC_KEY`. Keep the private key local.
 
-SSH is deliberately blocked by the Hetzner firewall by default. If emergency SSH is needed, set `ssh_allowed_cidrs` through Terraform to a narrow CIDR. The Hetzner web console remains available independently.
+### SSH through Cloudflare Access
+
+On macOS install the client-side connector once:
+
+```bash
+brew install cloudflared
+```
+
+Find the executable:
+
+```bash
+command -v cloudflared
+```
+
+Add this to `~/.ssh/config`, adjusting the `ProxyCommand` path if Homebrew installed `cloudflared` elsewhere:
+
+```sshconfig
+Host teplotec-erp
+  HostName ssh.teplotec.com
+  User root
+  IdentityFile ~/.ssh/teplotec
+  ProxyCommand /opt/homebrew/bin/cloudflared access ssh --hostname %h
+```
+
+Then connect with:
+
+```bash
+ssh teplotec-erp
+```
+
+`cloudflared` opens a browser when Cloudflare authentication is required. Once a valid Cloudflare Access session exists, SSH continues in the normal terminal. Hetzner TCP/22 remains closed to the public Internet.
+
+## ERP administrator password
+
+The initial Administrator password is generated on the server rather than stored in Terraform state:
+
+```bash
+sudo cat /root/erpnext-credentials.txt
+```
+
+Application passwords should be managed separately from Terraform. A dedicated GitHub admin workflow will use a GitHub Secret rather than putting the ERP password into Terraform variables or R2 state.
 
 ## Workflow
 
@@ -131,16 +183,8 @@ Production changes are not automatically applied after merge. Run `Terraform App
 6. Wait for cloud-init to install Docker, start ERPNext, create the site, and start `cloudflared`.
 7. Open `https://erp.teplotec.com` and authenticate through Cloudflare Access.
 
-ERPNext credentials are generated on the server rather than in Terraform. Retrieve them from the Hetzner web console:
-
-```bash
-sudo cat /root/erpnext-credentials.txt
-```
-
-The file is mode `0600` and contains the ERPNext `Administrator` password and MariaDB root password.
-
 ## Notes
 
 - Hetzner server delete/rebuild protection is enabled.
 - Hetzner backups are currently disabled to keep the initial deployment lean. Add a backup policy before ERPNext contains business-critical data.
-- Do not point `erp.teplotec.com` directly at the Hetzner public IP. It is intentionally routed only through Cloudflare Tunnel.
+- Do not point `erp.teplotec.com` or `ssh.teplotec.com` directly at the Hetzner public IP. They are intentionally routed only through Cloudflare Tunnel.
