@@ -27,10 +27,10 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-      TF_VAR_cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
-      TF_VAR_access_allowed_emails: ${{ vars.ACCESS_ALLOWED_EMAILS_JSON }}
-      TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
+      ACCESS_ALLOWED_EMAILS_JSON: ${{ vars.ACCESS_ALLOWED_EMAILS_JSON }}
+      SSH_PUBLIC_KEY: ${{ vars.SSH_PUBLIC_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -57,10 +57,10 @@ jobs:
              && -n "$AWS_ACCESS_KEY_ID" \
              && -n "$AWS_SECRET_ACCESS_KEY" \
              && -n "$TF_STATE_BUCKET" \
-             && -n "$TF_VAR_cloudflare_account_id" \
-             && -n "$TF_VAR_cloudflare_zone_id" \
-             && -n "$TF_VAR_access_allowed_emails" \
-             && -n "$TF_VAR_ssh_public_key" ]]; then
+             && -n "$CLOUDFLARE_ACCOUNT_ID" \
+             && -n "$CLOUDFLARE_ZONE_ID" \
+             && -n "$ACCESS_ALLOWED_EMAILS_JSON" \
+             && -n "$SSH_PUBLIC_KEY" ]]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
@@ -76,7 +76,7 @@ jobs:
           region = "auto"
 
           endpoints = {
-            s3 = "https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com"
+            s3 = "https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com"
           }
 
           skip_credentials_validation = true
@@ -94,6 +94,11 @@ jobs:
 
       - name: Terraform plan
         if: steps.plan_config.outputs.ready == 'true'
+        env:
+          TF_VAR_cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
+          TF_VAR_access_allowed_emails: ${{ vars.ACCESS_ALLOWED_EMAILS_JSON }}
+          TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
         run: terraform plan -input=false -no-color
 
       - name: Plan not run yet
