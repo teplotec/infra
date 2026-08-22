@@ -62,6 +62,7 @@ Use repository-level secrets and variables under `Settings -> Secrets and variab
 - `CLOUDFLARE_API_TOKEN`
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
+- `ERPNEXT_ADMIN_PASSWORD` - used only by the separate ERP Admin workflow
 
 ### Repository variables
 
@@ -165,13 +166,47 @@ The initial Administrator password is generated on the server rather than stored
 sudo cat /root/erpnext-credentials.txt
 ```
 
-Application passwords should be managed separately from Terraform. A dedicated GitHub admin workflow will use a GitHub Secret rather than putting the ERP password into Terraform variables or R2 state.
+Application passwords are managed separately from Terraform. The `ERP Admin` GitHub workflow reads `ERPNEXT_ADMIN_PASSWORD` from GitHub Secrets and updates ERP locally on the CX33 self-hosted runner.
+
+## ERP Admin self-hosted runner
+
+The admin workflow deliberately does not automate through remote SSH. A small GitHub self-hosted runner lives on the CX33 and connects outbound to GitHub. The runner is not in the `docker` group and does not receive general sudo access. It can only run the root-owned `/usr/local/sbin/teplotec-erp-admin` command, which accepts a small whitelist of operations.
+
+One-time setup after `ssh teplotec-erp` works:
+
+1. Clone this repository on your Mac and copy the two setup scripts to the server:
+
+```bash
+gh repo clone teplotec/infra
+cd infra
+scp scripts/erp-admin scripts/install-erp-admin teplotec-erp:/tmp/
+ssh teplotec-erp 'sudo bash /tmp/install-erp-admin /tmp/erp-admin'
+```
+
+2. In GitHub open `teplotec/infra -> Settings -> Actions -> Runners -> New self-hosted runner`. Select Linux x64 and use the commands GitHub generates. Run the download/extract/config commands as the `github-runner` user in `/home/github-runner/actions-runner` and add the custom label `teplotec-erp-admin` to the `config.sh` command.
+
+3. Install and start the runner service as root:
+
+```bash
+cd /home/github-runner/actions-runner
+sudo ./svc.sh install github-runner
+sudo ./svc.sh start
+sudo ./svc.sh status
+```
+
+4. Add the repository secret `ERPNEXT_ADMIN_PASSWORD` with the Administrator password you want ERP to use.
+
+5. Open `Actions -> ERP Admin -> Run workflow`, select `sync-admin-password`, enter `APPLY`, and run it.
+
+The same workflow also exposes guarded `status`, `restart`, and `migrate` operations. `status` is read-only; mutating operations require the explicit `APPLY` confirmation.
 
 ## Workflow
 
 Pull requests touching Terraform run syntax, provider-schema validation, and a real plan when all credentials are configured.
 
-Production changes are not automatically applied after merge. Run `Terraform Apply` manually from the `main` branch after reviewing the plan.
+Production infrastructure changes are not automatically applied after merge. Run `Terraform Apply` manually from the `main` branch after reviewing the plan.
+
+ERP application administration uses the separate `ERP Admin` workflow and self-hosted runner described above.
 
 ## First deployment
 

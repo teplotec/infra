@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ERP_HOSTNAME="erp.teplotec.com"
+ROOT_DIR="/opt/teplotec/erpnext"
+GITOPS_DIR="$ROOT_DIR/gitops"
+ENV_FILE="$GITOPS_DIR/erpnext.env"
+COMPOSE_FILE="$GITOPS_DIR/docker-compose.yml"
+PROJECT_NAME="teplotec-erp"
+
+compose() {
+  docker compose \
+    --project-name "$PROJECT_NAME" \
+    --env-file "$ENV_FILE" \
+    -f "$COMPOSE_FILE" \
+    "$@"
+}
+
+require_runtime() {
+  test -f "$ENV_FILE" || { echo "Missing $ENV_FILE" >&2; exit 1; }
+  test -f "$COMPOSE_FILE" || { echo "Missing $COMPOSE_FILE" >&2; exit 1; }
+  command -v docker >/dev/null 2>&1 || { echo "docker is not installed" >&2; exit 1; }
+}
+
+require_runtime
+
+case "${1:-}" in
+  status)
+    compose ps
+    ;;
+
+  restart)
+    compose restart
+    ;;
+
+  migrate)
+    compose exec -T backend bench --site "$ERP_HOSTNAME" migrate
+    ;;
+
+  set-admin-password)
+    IFS= read -r admin_password
+    if [[ -z "$admin_password" ]]; then
+      echo "Administrator password was not provided on stdin" >&2
+      exit 1
+    fi
+
+    compose exec -T backend \
+      bench --site "$ERP_HOSTNAME" set-admin-password "$admin_password"
+    ;;
+
+  *)
+    echo "Usage: $0 {status|restart|migrate|set-admin-password}" >&2
+    exit 64
+    ;;
+esac
