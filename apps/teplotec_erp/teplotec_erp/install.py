@@ -1,0 +1,30 @@
+import frappe
+
+
+def after_install():
+    ensure_ukrainian_language()
+
+
+def after_migrate():
+    ensure_ukrainian_language()
+
+
+def ensure_ukrainian_language():
+    values = {
+        "language_code": "uk",
+        "language_name": "Українська",
+        "enabled": 1,
+        "date_format": "dd.mm.yyyy",
+        "time_format": "HH:mm",
+        "number_format": "# ###,##",
+        "first_day_of_the_week": "Monday",
+    }
+
+    if frappe.db.exists("Language", "uk"):
+        language = frappe.get_doc("Language", "uk")
+        language.update(values)
+        language.save(ignore_permissions=True)
+    else:
+        frappe.get_doc({"doctype": "Language", **values}).insert(ignore_permissions=True)
+
+    frappe.clear_cache()
