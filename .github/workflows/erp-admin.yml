@@ -1,0 +1,60 @@
+name: ERP Admin
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Administrative operation"
+        required: true
+        type: choice
+        options:
+          - status
+          - sync-admin-password
+          - restart
+          - migrate
+      confirmation:
+        description: "Type APPLY for mutating operations; leave empty for status"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erp-production-admin
+  cancel-in-progress: false
+
+jobs:
+  admin:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (inputs.operation == 'status' || inputs.confirmation == 'APPLY')
+    runs-on: [self-hosted, linux, x64, teplotec-erp-admin]
+    environment: production
+
+    steps:
+      - name: ERP status
+        if: inputs.operation == 'status'
+        run: sudo /usr/local/sbin/teplotec-erp-admin status
+
+      - name: Sync Administrator password
+        if: inputs.operation == 'sync-admin-password'
+        env:
+          ERPNEXT_ADMIN_PASSWORD: ${{ secrets.ERPNEXT_ADMIN_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$ERPNEXT_ADMIN_PASSWORD" ]]; then
+            echo "ERPNEXT_ADMIN_PASSWORD repository secret is required" >&2
+            exit 1
+          fi
+          printf '%s\n' "$ERPNEXT_ADMIN_PASSWORD" | \
+            sudo /usr/local/sbin/teplotec-erp-admin set-admin-password
+
+      - name: Restart ERP containers
+        if: inputs.operation == 'restart'
+        run: sudo /usr/local/sbin/teplotec-erp-admin restart
+
+      - name: Run ERP migrations
+        if: inputs.operation == 'migrate'
+        run: sudo /usr/local/sbin/teplotec-erp-admin migrate
