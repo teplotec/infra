@@ -1,6 +1,11 @@
 output "erp_url" {
-  description = "ERPNext URL protected by Cloudflare Access."
+  description = "ERP URL protected by Cloudflare Access."
   value       = "https://${var.erp_hostname}"
+}
+
+output "ssh_hostname" {
+  description = "Administrative SSH hostname protected by Cloudflare Access."
+  value       = var.ssh_hostname
 }
 
 output "server_id" {
@@ -19,6 +24,6 @@ output "cloudflare_tunnel_id" {
 }
 
 output "credentials_path" {
-  description = "Path on the server containing the generated ERPNext Administrator and MariaDB credentials."
+  description = "Path on the server containing the generated ERP Administrator and MariaDB credentials."
   value       = "/root/erpnext-credentials.txt"
 }
