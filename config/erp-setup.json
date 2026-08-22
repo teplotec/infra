@@ -1,0 +1,12 @@
+{
+  "language": "English",
+  "country": "Ukraine",
+  "timezone": "Europe/Kyiv",
+  "currency": "UAH",
+  "company_name": "TEPLOTEC",
+  "company_abbr": "TTEC",
+  "chart_of_accounts": "Standard with Numbers",
+  "financial_year_start_month": 1,
+  "setup_demo": 0,
+  "enable_telemetry": 0
+}

@@ -1,0 +1,29 @@
+name: ERP Config Check
+
+on:
+  pull_request:
+    paths:
+      - "config/erp-setup.json"
+      - "scripts/erp-admin"
+      - "apps/teplotec_erp/**"
+      - ".github/workflows/erp-reset.yml"
+      - ".github/workflows/erp-config-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate reset script
+        run: bash -n scripts/erp-admin
+
+      - name: Validate setup profile
+        run: python3 -m json.tool config/erp-setup.json >/dev/null
+
+      - name: Compile TeploTEC ERP Python
+        run: python3 -m compileall -q apps/teplotec_erp/teplotec_erp

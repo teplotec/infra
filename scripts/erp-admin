@@ -20,6 +20,48 @@ require_runtime() {
   test -f "$ENV_FILE" || { echo "Missing $ENV_FILE" >&2; exit 1; }
   test -f "$COMPOSE_FILE" || { echo "Missing $COMPOSE_FILE" >&2; exit 1; }
   command -v docker >/dev/null 2>&1 || { echo "docker is not installed" >&2; exit 1; }
+  command -v python3 >/dev/null 2>&1 || { echo "python3 is not installed" >&2; exit 1; }
+}
+
+read_admin_password() {
+  IFS= read -r admin_password
+  if [[ -z "$admin_password" ]]; then
+    echo "Administrator password was not provided on stdin" >&2
+    exit 1
+  fi
+}
+
+mariadb_root_password() {
+  awk -F= '/^DB_PASSWORD=/{print substr($0, index($0, "=") + 1)}' "$ENV_FILE"
+}
+
+render_setup_args() {
+  local setup_file="$1"
+
+  python3 - "$setup_file" <<'PY'
+import calendar
+import json
+import sys
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+path = sys.argv[1]
+with open(path, encoding="utf-8") as handle:
+    config = json.load(handle)
+
+start_month = int(config.pop("financial_year_start_month", 1))
+timezone = config.get("timezone", "UTC")
+now = datetime.now(ZoneInfo(timezone))
+start_year = now.year if now.month >= start_month else now.year - 1
+end_year = start_year + 1 if start_month != 1 else start_year
+end_month = 12 if start_month == 1 else start_month - 1
+end_day = calendar.monthrange(end_year, end_month)[1]
+
+config["fy_start_date"] = f"{start_year:04d}-{start_month:02d}-01"
+config["fy_end_date"] = f"{end_year:04d}-{end_month:02d}-{end_day:02d}"
+
+print(json.dumps(config, separators=(",", ":"), ensure_ascii=False))
+PY
 }
 
 require_runtime
@@ -38,18 +80,50 @@ case "${1:-}" in
     ;;
 
   set-admin-password)
-    IFS= read -r admin_password
-    if [[ -z "$admin_password" ]]; then
-      echo "Administrator password was not provided on stdin" >&2
+    read_admin_password
+    compose exec -T backend \
+      bench --site "$ERP_HOSTNAME" set-admin-password "$admin_password"
+    unset admin_password
+    ;;
+
+  reset)
+    setup_file="${2:-}"
+    if [[ -z "$setup_file" || ! -r "$setup_file" ]]; then
+      echo "Usage: $0 reset /path/to/erp-setup.json" >&2
+      exit 64
+    fi
+
+    read_admin_password
+    db_password="$(mariadb_root_password)"
+    if [[ -z "$db_password" ]]; then
+      echo "DB_PASSWORD is missing from $ENV_FILE" >&2
       exit 1
     fi
 
+    setup_args="$(render_setup_args "$setup_file")"
+
+    echo "Reinstalling $ERP_HOSTNAME with the current installed apps..."
     compose exec -T backend \
-      bench --site "$ERP_HOSTNAME" set-admin-password "$admin_password"
+      bench --site "$ERP_HOSTNAME" reinstall \
+      --yes \
+      --mariadb-root-password "$db_password" \
+      --admin-password "$admin_password"
+
+    echo "Applying version-controlled ERP setup profile..."
+    compose exec -T backend \
+      bench --site "$ERP_HOSTNAME" execute \
+      frappe.desk.page.setup_wizard.setup_wizard.setup_complete \
+      --args "[$setup_args]"
+
+    compose exec -T backend bench --site "$ERP_HOSTNAME" clear-cache
+    compose exec -T backend bench --site "$ERP_HOSTNAME" migrate
+
+    unset admin_password db_password setup_args
+    echo "ERP reset and setup completed."
     ;;
 
   *)
-    echo "Usage: $0 {status|restart|migrate|set-admin-password}" >&2
+    echo "Usage: $0 {status|restart|migrate|set-admin-password|reset}" >&2
     exit 64
     ;;
 esac

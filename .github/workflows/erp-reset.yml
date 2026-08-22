@@ -1,0 +1,42 @@
+name: ERP Reset
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type RESET ERP to destroy and recreate the ERP database"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erp-production-admin
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'RESET ERP'
+    runs-on: [self-hosted, linux, x64, teplotec-erp-admin]
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate setup profile
+        run: python3 -m json.tool config/erp-setup.json >/dev/null
+
+      - name: Reinstall and configure ERP
+        env:
+          ERPNEXT_ADMIN_PASSWORD: ${{ secrets.ERPNEXT_ADMIN_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$ERPNEXT_ADMIN_PASSWORD" ]]; then
+            echo "ERPNEXT_ADMIN_PASSWORD repository secret is required" >&2
+            exit 1
+          fi
+
+          printf '%s\n' "$ERPNEXT_ADMIN_PASSWORD" | \
+            sudo /usr/local/sbin/teplotec-erp-admin reset "$GITHUB_WORKSPACE/config/erp-setup.json"
