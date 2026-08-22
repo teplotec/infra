@@ -15,6 +15,10 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "erp" {
         service  = "http://127.0.0.1:8080"
       },
       {
+        hostname = var.project_hostname
+        service  = "http://127.0.0.1:3001"
+      },
+      {
         hostname = var.ssh_hostname
         service  = "ssh://127.0.0.1:22"
       },
@@ -38,6 +42,16 @@ resource "cloudflare_dns_record" "erp" {
   proxied = true
   ttl     = 1
   comment = "ERP via Cloudflare Tunnel - managed by Terraform"
+}
+
+resource "cloudflare_dns_record" "project" {
+  zone_id = var.cloudflare_zone_id
+  name    = var.project_hostname
+  type    = "CNAME"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.erp.id}.cfargotunnel.com"
+  proxied = true
+  ttl     = 1
+  comment = "Project app via Cloudflare Tunnel - managed by Terraform"
 }
 
 resource "cloudflare_dns_record" "ssh" {
@@ -78,6 +92,13 @@ check "erp_access_has_users" {
   assert {
     condition     = length(local.access_all_emails) > 0
     error_message = "At least one trusted, staff, or guest email must be allowed to access ERP."
+  }
+}
+
+check "project_access_has_users" {
+  assert {
+    condition     = length(var.access_trusted_emails) > 0
+    error_message = "At least one trusted email must be configured to access the Project application."
   }
 }
 
@@ -146,6 +167,23 @@ resource "cloudflare_zero_trust_access_policy" "erp_guests" {
   ]
 }
 
+resource "cloudflare_zero_trust_access_policy" "project_trusted" {
+  count = length(var.access_trusted_emails) > 0 ? 1 : 0
+
+  account_id       = var.cloudflare_account_id
+  name             = "TeploTEC Project trusted users"
+  decision         = "allow"
+  session_duration = var.access_trusted_session_duration
+
+  include = [
+    for email_address in var.access_trusted_emails : {
+      email = {
+        email = email_address
+      }
+    }
+  ]
+}
+
 resource "cloudflare_zero_trust_access_policy" "ssh_admins" {
   account_id       = var.cloudflare_account_id
   name             = "TeploTEC SSH trusted admins"
@@ -192,6 +230,22 @@ resource "cloudflare_zero_trust_access_application" "erp" {
       }
     ] : [],
   )
+}
+
+resource "cloudflare_zero_trust_access_application" "project" {
+  account_id = var.cloudflare_account_id
+  name       = "Project"
+  domain     = var.project_hostname
+  type       = "self_hosted"
+
+  allowed_idps = local.cloudflare_identity_provider_ids
+
+  policies = length(var.access_trusted_emails) > 0 ? [
+    {
+      id         = cloudflare_zero_trust_access_policy.project_trusted[0].id
+      precedence = 1
+    }
+  ] : []
 }
 
 resource "cloudflare_zero_trust_access_application" "ssh" {
