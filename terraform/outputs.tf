@@ -3,6 +3,11 @@ output "erp_url" {
   value       = "https://${var.erp_hostname}"
 }
 
+output "project_url" {
+  description = "Project application URL protected by Cloudflare Access."
+  value       = "https://${var.project_hostname}"
+}
+
 output "ssh_hostname" {
   description = "Administrative SSH hostname protected by Cloudflare Access."
   value       = var.ssh_hostname
@@ -14,7 +19,7 @@ output "server_id" {
 }
 
 output "server_ipv4" {
-  description = "Hetzner public IPv4. No ERP HTTP ports are exposed by the firewall."
+  description = "Hetzner public IPv4. No ERP or Project HTTP ports are exposed by the firewall."
   value       = hcloud_server.erp.ipv4_address
 }
 
