@@ -3,10 +3,13 @@ set -Eeuo pipefail
 
 ERP_HOSTNAME="erp.teplotec.com"
 ROOT_DIR="/opt/teplotec/erpnext"
+FRAPPE_DIR="$ROOT_DIR/frappe_docker"
 GITOPS_DIR="$ROOT_DIR/gitops"
 ENV_FILE="$GITOPS_DIR/erpnext.env"
 COMPOSE_FILE="$GITOPS_DIR/docker-compose.yml"
 PROJECT_NAME="teplotec-erp"
+TEPLOTEC_APP="teplotec_erp"
+TEPLOTEC_IMAGE="ghcr.io/teplotec/erpnext"
 
 compose() {
   docker compose \
@@ -19,6 +22,7 @@ compose() {
 require_runtime() {
   test -f "$ENV_FILE" || { echo "Missing $ENV_FILE" >&2; exit 1; }
   test -f "$COMPOSE_FILE" || { echo "Missing $COMPOSE_FILE" >&2; exit 1; }
+  test -d "$FRAPPE_DIR" || { echo "Missing $FRAPPE_DIR" >&2; exit 1; }
   command -v docker >/dev/null 2>&1 || { echo "docker is not installed" >&2; exit 1; }
   command -v python3 >/dev/null 2>&1 || { echo "python3 is not installed" >&2; exit 1; }
 }
@@ -33,6 +37,47 @@ read_admin_password() {
 
 mariadb_root_password() {
   awk -F= '/^DB_PASSWORD=/{print substr($0, index($0, "=") + 1)}' "$ENV_FILE"
+}
+
+set_env_value() {
+  local key="$1"
+  local value="$2"
+
+  python3 - "$ENV_FILE" "$key" "$value" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+key = sys.argv[2]
+value = sys.argv[3]
+lines = path.read_text(encoding="utf-8").splitlines()
+new_line = f"{key}={value}"
+
+for index, line in enumerate(lines):
+    if line.startswith(f"{key}="):
+        lines[index] = new_line
+        break
+else:
+    lines.append(new_line)
+
+path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+}
+
+regenerate_compose() {
+  local temporary_file
+  temporary_file="$(mktemp "$GITOPS_DIR/docker-compose.yml.XXXXXX")"
+
+  cd "$FRAPPE_DIR"
+  docker compose --env-file "$ENV_FILE" \
+    -f compose.yaml \
+    -f overrides/compose.mariadb.yaml \
+    -f overrides/compose.redis.yaml \
+    -f overrides/compose.noproxy.yaml \
+    config > "$temporary_file"
+
+  chmod 600 "$temporary_file"
+  mv "$temporary_file" "$COMPOSE_FILE"
 }
 
 render_setup_args() {
@@ -64,6 +109,14 @@ print(json.dumps(config, separators=(",", ":"), ensure_ascii=False))
 PY
 }
 
+ensure_teplotec_app_installed() {
+  if ! compose exec -T backend bash -lc \
+      "bench --site '$ERP_HOSTNAME' list-apps | grep -q '^$TEPLOTEC_APP'"; then
+    echo "Installing $TEPLOTEC_APP on $ERP_HOSTNAME..."
+    compose exec -T backend bench --site "$ERP_HOSTNAME" install-app "$TEPLOTEC_APP"
+  fi
+}
+
 require_runtime
 
 case "${1:-}" in
@@ -84,6 +137,53 @@ case "${1:-}" in
     compose exec -T backend \
       bench --site "$ERP_HOSTNAME" set-admin-password "$admin_password"
     unset admin_password
+    ;;
+
+  deploy-image)
+    image_ref="${2:-}"
+    if [[ ! "$image_ref" =~ ^ghcr\.io/teplotec/erpnext:sha-[0-9a-f]{40}$ ]]; then
+      echo "Usage: $0 deploy-image ghcr.io/teplotec/erpnext:sha-<40-char-git-sha>" >&2
+      exit 64
+    fi
+
+    IFS= read -r registry_user
+    IFS= read -r registry_token
+    if [[ -z "$registry_user" || -z "$registry_token" ]]; then
+      echo "GHCR username and token must be provided on stdin" >&2
+      exit 1
+    fi
+
+    printf '%s' "$registry_token" | docker login ghcr.io -u "$registry_user" --password-stdin >/dev/null
+    trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+
+    image_name="${image_ref%:*}"
+    image_tag="${image_ref##*:}"
+
+    if [[ "$image_name" != "$TEPLOTEC_IMAGE" ]]; then
+      echo "Unexpected image repository: $image_name" >&2
+      exit 1
+    fi
+
+    set_env_value CUSTOM_IMAGE "$image_name"
+    set_env_value CUSTOM_TAG "$image_tag"
+    set_env_value PULL_POLICY always
+    regenerate_compose
+
+    echo "Pulling immutable ERP image $image_ref..."
+    compose pull
+    compose up -d --remove-orphans
+
+    if ! compose exec -T backend bash -lc "grep -qx '$TEPLOTEC_APP' sites/apps.txt"; then
+      echo "$TEPLOTEC_APP is missing from the deployed image" >&2
+      exit 1
+    fi
+
+    ensure_teplotec_app_installed
+    compose exec -T backend bench --site "$ERP_HOSTNAME" migrate
+    compose exec -T backend bench --site "$ERP_HOSTNAME" clear-cache
+
+    unset registry_user registry_token
+    echo "Deployed $image_ref and synchronized $TEPLOTEC_APP."
     ;;
 
   reset)
@@ -115,6 +215,7 @@ case "${1:-}" in
       frappe.desk.page.setup_wizard.setup_wizard.setup_complete \
       --args "[$setup_args]"
 
+    ensure_teplotec_app_installed
     compose exec -T backend bench --site "$ERP_HOSTNAME" clear-cache
     compose exec -T backend bench --site "$ERP_HOSTNAME" migrate
 
@@ -123,7 +224,7 @@ case "${1:-}" in
     ;;
 
   *)
-    echo "Usage: $0 {status|restart|migrate|set-admin-password|reset}" >&2
+    echo "Usage: $0 {status|restart|migrate|set-admin-password|deploy-image|reset}" >&2
     exit 64
     ;;
 esac
