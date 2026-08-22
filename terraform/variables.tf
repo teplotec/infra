@@ -9,7 +9,7 @@ variable "cloudflare_zone_id" {
 }
 
 variable "access_trusted_emails" {
-  description = "Trusted ERP users. They receive the longest Cloudflare Access session."
+  description = "Trusted internal users. They receive the longest Cloudflare Access session and can access internal TeploTEC applications such as ERP and Project."
   type        = list(string)
   default     = []
 }
@@ -27,7 +27,7 @@ variable "access_guest_emails" {
 }
 
 variable "access_trusted_session_duration" {
-  description = "Cloudflare Access session duration for trusted ERP users."
+  description = "Cloudflare Access session duration for trusted internal users."
   type        = string
   default     = "720h"
 }
@@ -59,6 +59,12 @@ variable "erp_hostname" {
   description = "Public ERPNext hostname protected by Cloudflare Access."
   type        = string
   default     = "erp.teplotec.com"
+}
+
+variable "project_hostname" {
+  description = "Internal TeploTEC Project application hostname protected by Cloudflare Access."
+  type        = string
+  default     = "project.teplotec.com"
 }
 
 variable "ssh_hostname" {
