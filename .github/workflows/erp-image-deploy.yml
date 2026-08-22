@@ -1,0 +1,37 @@
+name: ERP Image Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type DEPLOY ERP to deploy the image built from this main commit"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: erp-production-admin
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'DEPLOY ERP'
+    runs-on: [self-hosted, linux, x64, teplotec-erp-admin]
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Deploy immutable ERP image
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+          IMAGE_REF: ghcr.io/teplotec/erpnext:sha-${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          printf '%s\n%s\n' "$GITHUB_ACTOR" "$GHCR_TOKEN" | \
+            sudo /usr/local/sbin/teplotec-erp-admin deploy-image "$IMAGE_REF"
