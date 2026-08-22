@@ -1,0 +1,70 @@
+name: Terraform Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type APPLY to deploy production infrastructure"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-production
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'APPLY'
+    runs-on: ubuntu-latest
+    environment: production
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    env:
+      HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      TF_VAR_cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
+      TF_VAR_access_allowed_emails: ${{ vars.ACCESS_ALLOWED_EMAILS_JSON }}
+      TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+
+      - name: Write R2 backend config
+        shell: bash
+        run: |
+          cat > /tmp/backend.hcl <<BACKEND
+          bucket = "${{ vars.TF_STATE_BUCKET }}"
+          key    = "erp/production/terraform.tfstate"
+          region = "auto"
+
+          endpoints = {
+            s3 = "https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com"
+          }
+
+          skip_credentials_validation = true
+          skip_region_validation      = true
+          skip_requesting_account_id  = true
+          skip_metadata_api_check     = true
+          skip_s3_checksum            = true
+          use_path_style              = true
+          use_lockfile                = true
+          BACKEND
+
+      - name: Terraform init
+        run: terraform init -backend-config=/tmp/backend.hcl
+
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve
