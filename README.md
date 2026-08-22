@@ -96,6 +96,8 @@ Create an R2 API token scoped to that bucket with Object Read & Write. Save the 
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
 
+Terraform uses those two S3 credentials directly. The original R2 API token used to generate them is not stored in GitHub and is not required by the Terraform workflow.
+
 Terraform uses the S3 backend against the R2 S3-compatible endpoint and enables the S3 lockfile. GitHub Actions also serializes Terraform runs with a concurrency group.
 
 Treat the state bucket as sensitive. Terraform state contains infrastructure metadata and the Cloudflare Tunnel credential used to bootstrap `cloudflared`.
