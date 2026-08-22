@@ -19,6 +19,16 @@ Browser
 
 The ERPNext HTTP port is bound to loopback only. Hetzner Firewall has no public inbound rules by default. SSH is also closed unless `ssh_allowed_cidrs` is explicitly configured.
 
+## Cloudflare Access sessions
+
+ERP access is split into three email tiers. Users do not need Cloudflare accounts; one-time PIN authentication is sent to the allowed email address.
+
+- Trusted users: 30 days (`720h`)
+- Staff: 7 days (`168h`)
+- Guests / external users: 24 hours (`24h`)
+
+An email must belong to only one tier.
+
 ## Pinned versions
 
 - Terraform 1.15.8
@@ -32,9 +42,9 @@ The ERPNext HTTP port is bound to loopback only. Hetzner Firewall has no public 
 
 ## GitHub Actions configuration
 
-### Repository secrets
+Use repository-level secrets and variables under `Settings -> Secrets and variables -> Actions`. Environment and organization secrets/variables are not required for this deployment.
 
-Create these under `Settings -> Secrets and variables -> Actions -> Secrets`:
+### Repository secrets
 
 - `HCLOUD_TOKEN`
 - `CLOUDFLARE_API_TOKEN`
@@ -43,13 +53,15 @@ Create these under `Settings -> Secrets and variables -> Actions -> Secrets`:
 
 ### Repository variables
 
-Create these under `Settings -> Secrets and variables -> Actions -> Variables`:
-
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_ZONE_ID`
 - `TF_STATE_BUCKET` - recommended: `teplotec-terraform-state`
 - `SSH_PUBLIC_KEY` - full `ssh-ed25519 ...` public key
-- `ACCESS_ALLOWED_EMAILS_JSON` - JSON array, for example `["admin@teplotec.com"]`
+- `ACCESS_TRUSTED_EMAILS_JSON` - JSON array, e.g. `["owner@example.com"]`
+- `ACCESS_STAFF_EMAILS_JSON` - JSON array, e.g. `["employee@example.com"]`
+- `ACCESS_GUEST_EMAILS_JSON` - JSON array, e.g. `[]`
+
+All three Access email variables must exist. Use `[]` for a tier that currently has no users.
 
 ## Hetzner token
 
@@ -57,7 +69,7 @@ In the Hetzner Cloud project:
 
 `Security -> API Tokens -> Generate API Token`
 
-Create `github-actions-terraform` with **Read & Write** permission and save the token as `HCLOUD_TOKEN`.
+Create `github-actions-terraform` with **Read & Write** permission and save the token as `HCLOUD_TOKEN`. Hetzner displays the full token only once.
 
 ## Cloudflare API token
 
@@ -103,25 +115,19 @@ SSH is deliberately blocked by the Hetzner firewall by default. If emergency SSH
 
 ## Workflow
 
-Pull requests touching Terraform run:
-
-```text
-terraform fmt -check
-terraform init
-terraform validate
-terraform plan
-```
+Pull requests touching Terraform run syntax, provider-schema validation, and a real plan when all credentials are configured.
 
 Production changes are not automatically applied after merge. Run `Terraform Apply` manually from the `main` branch after reviewing the plan.
 
 ## First deployment
 
 1. Add the secrets and variables above.
-2. Merge the infrastructure PR.
-3. Open `Actions -> Terraform Apply -> Run workflow` on `main`.
-4. Type `APPLY` into the confirmation field and start the workflow.
-5. Wait for cloud-init to install Docker, start ERPNext, create the site, and start `cloudflared`.
-6. Open `https://erp.teplotec.com` and authenticate through Cloudflare Access.
+2. Review the real Terraform plan in the pull request.
+3. Merge the infrastructure PR.
+4. Open `Actions -> Terraform Apply -> Run workflow` on `main`.
+5. Type `APPLY` into the confirmation field and start the workflow.
+6. Wait for cloud-init to install Docker, start ERPNext, create the site, and start `cloudflared`.
+7. Open `https://erp.teplotec.com` and authenticate through Cloudflare Access.
 
 ERPNext credentials are generated on the server rather than in Terraform. Retrieve them from the Hetzner web console:
 
