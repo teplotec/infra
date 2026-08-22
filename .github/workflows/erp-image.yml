@@ -104,78 +104,120 @@ jobs:
           set -euo pipefail
           docker image inspect "$IMAGE_NAME:sha-$GITHUB_SHA" >/dev/null
 
-      - name: Smoke test fresh ERPNext site
+      - name: Start smoke test services
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
 
-          network="teplotec-erp-smoke"
-          mariadb="teplotec-erp-smoke-db"
-          redis="teplotec-erp-smoke-redis"
-
-          cleanup() {
-            docker rm -f "$mariadb" "$redis" >/dev/null 2>&1 || true
-            docker network rm "$network" >/dev/null 2>&1 || true
-          }
-          trap cleanup EXIT
-
-          docker network create "$network" >/dev/null
+          docker network create teplotec-erp-smoke >/dev/null
 
           docker run -d \
-            --name "$mariadb" \
-            --network "$network" \
+            --name teplotec-erp-smoke-db \
+            --network teplotec-erp-smoke \
             -e MARIADB_ROOT_PASSWORD=ci-root-password \
-            mariadb:10.11 \
+            mariadb:11.8 \
             --character-set-server=utf8mb4 \
             --collation-server=utf8mb4_unicode_ci >/dev/null
 
           docker run -d \
-            --name "$redis" \
-            --network "$network" \
-            redis:7-alpine >/dev/null
+            --name teplotec-erp-smoke-redis \
+            --network teplotec-erp-smoke \
+            redis:6.2-alpine >/dev/null
 
           for attempt in {1..60}; do
-            if docker exec "$mariadb" healthcheck.sh --connect --innodb_initialized >/dev/null 2>&1; then
+            if docker exec teplotec-erp-smoke-db healthcheck.sh --connect --innodb_initialized >/dev/null 2>&1; then
               break
             fi
             if [[ "$attempt" == 60 ]]; then
-              docker logs "$mariadb"
+              docker logs teplotec-erp-smoke-db
               exit 1
             fi
             sleep 2
           done
 
           for attempt in {1..30}; do
-            if docker exec "$redis" redis-cli ping | grep -q PONG; then
+            if docker exec teplotec-erp-smoke-redis redis-cli ping | grep -q PONG; then
               break
             fi
             if [[ "$attempt" == 30 ]]; then
-              docker logs "$redis"
+              docker logs teplotec-erp-smoke-redis
               exit 1
             fi
             sleep 1
           done
 
-          docker run --rm \
-            --network "$network" \
+          docker run -d \
+            --name teplotec-erp-smoke-backend \
+            --network teplotec-erp-smoke \
             --entrypoint bash \
             "$IMAGE_NAME:sha-$GITHUB_SHA" \
-            -lc '
-              set -euo pipefail
-              bench set-config -g db_host teplotec-erp-smoke-db
-              bench set-config -gp db_port 3306
-              bench set-config -g redis_cache redis://teplotec-erp-smoke-redis:6379
-              bench set-config -g redis_queue redis://teplotec-erp-smoke-redis:6379
-              bench set-config -g redis_socketio redis://teplotec-erp-smoke-redis:6379
-              bench new-site ci.localhost \
-                --no-mariadb-socket \
-                --db-root-username root \
-                --db-root-password ci-root-password \
-                --admin-password ci-admin-password \
-                --install-app erpnext
-              bench --site ci.localhost install-app teplotec_erp
-              bench --site ci.localhost migrate
-              bench --site ci.localhost list-apps | grep -q teplotec_erp
-              bench --site ci.localhost execute teplotec_erp.diagnostics.verify_localization
-            '
+            -lc 'while true; do sleep 3600; done' >/dev/null
+
+      - name: Configure smoke test bench
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          backend="teplotec-erp-smoke-backend"
+
+          docker exec "$backend" bench set-config -g db_host teplotec-erp-smoke-db
+          docker exec "$backend" bench set-config -gp db_port 3306
+          docker exec "$backend" bench set-config -g redis_cache redis://teplotec-erp-smoke-redis:6379
+          docker exec "$backend" bench set-config -g redis_queue redis://teplotec-erp-smoke-redis:6379
+          docker exec "$backend" bench set-config -g redis_socketio redis://teplotec-erp-smoke-redis:6379
+
+      - name: Create fresh ERPNext site
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker exec teplotec-erp-smoke-backend \
+            bench new-site ci.localhost \
+            --no-mariadb-socket \
+            --db-root-username root \
+            --db-root-password ci-root-password \
+            --admin-password ci-admin-password \
+            --mariadb-user-host-login-scope='%' \
+            --install-app erpnext
+
+      - name: Install TeploTEC ERP app
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker exec teplotec-erp-smoke-backend \
+            bench --site ci.localhost install-app teplotec_erp
+
+      - name: Migrate smoke test site
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker exec teplotec-erp-smoke-backend \
+            bench --site ci.localhost migrate
+
+      - name: Verify TeploTEC localization
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker exec teplotec-erp-smoke-backend \
+            bench --site ci.localhost list-apps | grep -q teplotec_erp
+
+          docker exec teplotec-erp-smoke-backend \
+            bench --site ci.localhost execute teplotec_erp.diagnostics.verify_localization
+
+      - name: Cleanup smoke test
+        if: always() && github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          docker rm -f \
+            teplotec-erp-smoke-backend \
+            teplotec-erp-smoke-db \
+            teplotec-erp-smoke-redis >/dev/null 2>&1 || true
+          docker network rm teplotec-erp-smoke >/dev/null 2>&1 || true
