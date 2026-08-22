@@ -42,4 +42,14 @@ resource "hcloud_server" "erp" {
     environment = "production"
     managed_by  = "terraform"
   }
+
+  user_data = templatefile("${path.module}/cloud-init.yaml.tftpl", {
+    bootstrap_script = base64encode(templatefile("${path.module}/bootstrap.sh.tftpl", {
+      erp_hostname          = var.erp_hostname
+      erpnext_version       = var.erpnext_version
+      frappe_docker_version = var.frappe_docker_version
+      cloudflared_version   = var.cloudflared_version
+      tunnel_token          = data.cloudflare_zero_trust_tunnel_cloudflared_token.erp.token
+    }))
+  })
 }
