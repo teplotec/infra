@@ -1,0 +1,13 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+write_files:
+  - path: /usr/local/sbin/teplotec-erp-bootstrap
+    owner: root:root
+    permissions: "0700"
+    encoding: b64
+    content: ${bootstrap_script}
+
+runcmd:
+  - [bash, /usr/local/sbin/teplotec-erp-bootstrap]
