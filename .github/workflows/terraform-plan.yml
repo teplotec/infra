@@ -70,6 +70,30 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Cloudflare Access preflight
+        if: steps.plan_config.outputs.ready == 'true'
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          check_endpoint() {
+            local label="$1"
+            local path="$2"
+            local body
+            local status
+            body="$(mktemp)"
+            status="$(curl -sS -o "$body" -w '%{http_code}' \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H 'Content-Type: application/json' \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/access/$path")"
+            echo "$label: HTTP $status success=$(jq -r '.success // false' "$body") errors=$(jq -c '.errors // []' "$body")"
+            rm -f "$body"
+          }
+
+          check_endpoint "Zero Trust organization" "organizations"
+          check_endpoint "Access identity providers" "identity_providers"
+          check_endpoint "Access applications" "apps"
+
       - name: Write R2 backend config
         if: steps.plan_config.outputs.ready == 'true'
         shell: bash
