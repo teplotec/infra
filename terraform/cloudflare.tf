@@ -43,13 +43,72 @@ resource "cloudflare_zero_trust_access_identity_provider" "erp_otp" {
   config     = {}
 }
 
-resource "cloudflare_zero_trust_access_policy" "erp" {
-  account_id = var.cloudflare_account_id
-  name       = "TeploTEC ERP allowed emails"
-  decision   = "allow"
+locals {
+  access_all_emails = concat(
+    var.access_trusted_emails,
+    var.access_staff_emails,
+    var.access_guest_emails,
+  )
+}
+
+check "erp_access_has_users" {
+  assert {
+    condition     = length(local.access_all_emails) > 0
+    error_message = "At least one trusted, staff, or guest email must be allowed to access ERPNext."
+  }
+}
+
+check "erp_access_emails_are_unique" {
+  assert {
+    condition     = length(distinct(local.access_all_emails)) == length(local.access_all_emails)
+    error_message = "An ERP email may belong to only one Access tier. Move duplicate emails to the desired tier."
+  }
+}
+
+resource "cloudflare_zero_trust_access_policy" "erp_trusted" {
+  count = length(var.access_trusted_emails) > 0 ? 1 : 0
+
+  account_id       = var.cloudflare_account_id
+  name             = "TeploTEC ERP trusted users"
+  decision         = "allow"
+  session_duration = var.access_trusted_session_duration
 
   include = [
-    for email_address in var.access_allowed_emails : {
+    for email_address in var.access_trusted_emails : {
+      email = {
+        email = email_address
+      }
+    }
+  ]
+}
+
+resource "cloudflare_zero_trust_access_policy" "erp_staff" {
+  count = length(var.access_staff_emails) > 0 ? 1 : 0
+
+  account_id       = var.cloudflare_account_id
+  name             = "TeploTEC ERP staff"
+  decision         = "allow"
+  session_duration = var.access_staff_session_duration
+
+  include = [
+    for email_address in var.access_staff_emails : {
+      email = {
+        email = email_address
+      }
+    }
+  ]
+}
+
+resource "cloudflare_zero_trust_access_policy" "erp_guests" {
+  count = length(var.access_guest_emails) > 0 ? 1 : 0
+
+  account_id       = var.cloudflare_account_id
+  name             = "TeploTEC ERP guests"
+  decision         = "allow"
+  session_duration = var.access_guest_session_duration
+
+  include = [
+    for email_address in var.access_guest_emails : {
       email = {
         email = email_address
       }
@@ -65,10 +124,24 @@ resource "cloudflare_zero_trust_access_application" "erp" {
 
   allowed_idps = [cloudflare_zero_trust_access_identity_provider.erp_otp.id]
 
-  policies = [
-    {
-      id         = cloudflare_zero_trust_access_policy.erp.id
-      precedence = 1
-    }
-  ]
+  policies = concat(
+    length(var.access_trusted_emails) > 0 ? [
+      {
+        id         = cloudflare_zero_trust_access_policy.erp_trusted[0].id
+        precedence = 1
+      }
+    ] : [],
+    length(var.access_staff_emails) > 0 ? [
+      {
+        id         = cloudflare_zero_trust_access_policy.erp_staff[0].id
+        precedence = 2
+      }
+    ] : [],
+    length(var.access_guest_emails) > 0 ? [
+      {
+        id         = cloudflare_zero_trust_access_policy.erp_guests[0].id
+        precedence = 3
+      }
+    ] : [],
+  )
 }
