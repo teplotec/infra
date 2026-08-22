@@ -29,7 +29,9 @@ jobs:
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
-      ACCESS_ALLOWED_EMAILS_JSON: ${{ vars.ACCESS_ALLOWED_EMAILS_JSON }}
+      ACCESS_TRUSTED_EMAILS_JSON: ${{ vars.ACCESS_TRUSTED_EMAILS_JSON }}
+      ACCESS_STAFF_EMAILS_JSON: ${{ vars.ACCESS_STAFF_EMAILS_JSON }}
+      ACCESS_GUEST_EMAILS_JSON: ${{ vars.ACCESS_GUEST_EMAILS_JSON }}
       SSH_PUBLIC_KEY: ${{ vars.SSH_PUBLIC_KEY }}
 
     steps:
@@ -59,7 +61,9 @@ jobs:
              && -n "$TF_STATE_BUCKET" \
              && -n "$CLOUDFLARE_ACCOUNT_ID" \
              && -n "$CLOUDFLARE_ZONE_ID" \
-             && -n "$ACCESS_ALLOWED_EMAILS_JSON" \
+             && -n "$ACCESS_TRUSTED_EMAILS_JSON" \
+             && -n "$ACCESS_STAFF_EMAILS_JSON" \
+             && -n "$ACCESS_GUEST_EMAILS_JSON" \
              && -n "$SSH_PUBLIC_KEY" ]]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
@@ -97,7 +101,9 @@ jobs:
         env:
           TF_VAR_cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
-          TF_VAR_access_allowed_emails: ${{ vars.ACCESS_ALLOWED_EMAILS_JSON }}
+          TF_VAR_access_trusted_emails: ${{ vars.ACCESS_TRUSTED_EMAILS_JSON }}
+          TF_VAR_access_staff_emails: ${{ vars.ACCESS_STAFF_EMAILS_JSON }}
+          TF_VAR_access_guest_emails: ${{ vars.ACCESS_GUEST_EMAILS_JSON }}
           TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
         run: terraform plan -input=false -no-color
 
