@@ -103,3 +103,79 @@ jobs:
         run: |
           set -euo pipefail
           docker image inspect "$IMAGE_NAME:sha-$GITHUB_SHA" >/dev/null
+
+      - name: Smoke test fresh ERPNext site
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          network="teplotec-erp-smoke"
+          mariadb="teplotec-erp-smoke-db"
+          redis="teplotec-erp-smoke-redis"
+
+          cleanup() {
+            docker rm -f "$mariadb" "$redis" >/dev/null 2>&1 || true
+            docker network rm "$network" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker network create "$network" >/dev/null
+
+          docker run -d \
+            --name "$mariadb" \
+            --network "$network" \
+            -e MARIADB_ROOT_PASSWORD=ci-root-password \
+            mariadb:10.11 \
+            --character-set-server=utf8mb4 \
+            --collation-server=utf8mb4_unicode_ci >/dev/null
+
+          docker run -d \
+            --name "$redis" \
+            --network "$network" \
+            redis:7-alpine >/dev/null
+
+          for attempt in {1..60}; do
+            if docker exec "$mariadb" healthcheck.sh --connect --innodb_initialized >/dev/null 2>&1; then
+              break
+            fi
+            if [[ "$attempt" == 60 ]]; then
+              docker logs "$mariadb"
+              exit 1
+            fi
+            sleep 2
+          done
+
+          for attempt in {1..30}; do
+            if docker exec "$redis" redis-cli ping | grep -q PONG; then
+              break
+            fi
+            if [[ "$attempt" == 30 ]]; then
+              docker logs "$redis"
+              exit 1
+            fi
+            sleep 1
+          done
+
+          docker run --rm \
+            --network "$network" \
+            --entrypoint bash \
+            "$IMAGE_NAME:sha-$GITHUB_SHA" \
+            -lc '
+              set -euo pipefail
+              bench set-config -g db_host teplotec-erp-smoke-db
+              bench set-config -gp db_port 3306
+              bench set-config -g redis_cache redis://teplotec-erp-smoke-redis:6379
+              bench set-config -g redis_queue redis://teplotec-erp-smoke-redis:6379
+              bench set-config -g redis_socketio redis://teplotec-erp-smoke-redis:6379
+              bench new-site ci.localhost \
+                --no-mariadb-socket \
+                --db-root-username root \
+                --db-root-password ci-root-password \
+                --admin-password ci-admin-password \
+                --install-app erpnext
+              bench --site ci.localhost install-app teplotec_erp
+              bench --site ci.localhost migrate
+              bench --site ci.localhost list-apps | grep -q teplotec_erp
+              bench --site ci.localhost execute teplotec_erp.diagnostics.verify_localization
+            '
