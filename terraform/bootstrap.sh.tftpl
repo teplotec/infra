@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+ERP_HOSTNAME='${erp_hostname}'
+ERPNEXT_VERSION='${erpnext_version}'
+FRAPPE_DOCKER_VERSION='${frappe_docker_version}'
+CLOUDFLARED_VERSION='${cloudflared_version}'
+TUNNEL_TOKEN='${tunnel_token}'
+ROOT_DIR=/opt/teplotec/erpnext
+FRAPPE_DIR="$ROOT_DIR/frappe_docker"
+GITOPS_DIR="$ROOT_DIR/gitops"
+ENV_FILE="$GITOPS_DIR/erpnext.env"
+COMPOSE_FILE="$GITOPS_DIR/docker-compose.yml"
+CREDENTIALS_FILE=/root/erpnext-credentials.txt
+
+apt-get update
+apt-get install -y ca-certificates curl git openssl
+
+if ! command -v docker >/dev/null 2>&1; then
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  chmod a+r /etc/apt/keyrings/docker.asc
+  . /etc/os-release
+  printf 'deb [arch=%s signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu %s stable\n' "$(dpkg --print-architecture)" "$VERSION_CODENAME" > /etc/apt/sources.list.d/docker.list
+  apt-get update
+  apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+fi
+
+systemctl enable --now docker
+mkdir -p "$ROOT_DIR" "$GITOPS_DIR"
+
+if [ ! -d "$FRAPPE_DIR/.git" ]; then
+  git clone --branch "$FRAPPE_DOCKER_VERSION" --depth 1 https://github.com/frappe/frappe_docker.git "$FRAPPE_DIR"
+fi
+
+if [ ! -f "$CREDENTIALS_FILE" ]; then
+  DB_PASSWORD="$(openssl rand -hex 32)"
+  ADMIN_PASSWORD="$(openssl rand -base64 36 | tr -d '\n' | tr '/+' '_-')"
+  umask 077
+  cat > "$CREDENTIALS_FILE" <<CREDS
+ERP_URL=https://$ERP_HOSTNAME
+ERP_USERNAME=Administrator
+ERP_ADMIN_PASSWORD=$ADMIN_PASSWORD
+MARIADB_ROOT_PASSWORD=$DB_PASSWORD
+CREDS
+else
+  DB_PASSWORD="$(awk -F= '/^MARIADB_ROOT_PASSWORD=/{print substr($0, index($0, "=") + 1)}' "$CREDENTIALS_FILE")"
+  ADMIN_PASSWORD="$(awk -F= '/^ERP_ADMIN_PASSWORD=/{print substr($0, index($0, "=") + 1)}' "$CREDENTIALS_FILE")"
+fi
+
+umask 077
+cat > "$ENV_FILE" <<ENV
+ERPNEXT_VERSION=$ERPNEXT_VERSION
+DB_PASSWORD=$DB_PASSWORD
+FRAPPE_SITE_NAME_HEADER=$ERP_HOSTNAME
+HTTP_PUBLISH_PORT=127.0.0.1:8080
+ENV
+
+cd "$FRAPPE_DIR"
+docker compose --env-file "$ENV_FILE" \
+  -f compose.yaml \
+  -f overrides/compose.mariadb.yaml \
+  -f overrides/compose.redis.yaml \
+  -f overrides/compose.noproxy.yaml \
+  config > "$COMPOSE_FILE"
+
+docker compose --project-name teplotec-erp --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
+
+SITE_EXISTS=0
+for attempt in $(seq 1 60); do
+  if docker compose --project-name teplotec-erp --env-file "$ENV_FILE" -f "$COMPOSE_FILE" \
+      exec -T backend bash -lc "test -f sites/$ERP_HOSTNAME/site_config.json"; then
+    SITE_EXISTS=1
+    break
+  fi
+
+  if docker compose --project-name teplotec-erp --env-file "$ENV_FILE" -f "$COMPOSE_FILE" \
+      exec -T backend bench new-site "$ERP_HOSTNAME" \
+      --mariadb-user-host-login-scope='172.%.%.%' \
+      --db-root-password "$DB_PASSWORD" \
+      --admin-password "$ADMIN_PASSWORD" \
+      --install-app erpnext; then
+    SITE_EXISTS=1
+    break
+  fi
+
+  sleep 10
+done
+
+if [ "$SITE_EXISTS" -ne 1 ]; then
+  echo "ERPNext site creation failed" >&2
+  docker compose --project-name teplotec-erp --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps >&2 || true
+  exit 1
+fi
+
+docker rm -f cloudflared >/dev/null 2>&1 || true
+docker run -d \
+  --name cloudflared \
+  --restart unless-stopped \
+  --network host \
+  "cloudflare/cloudflared:$CLOUDFLARED_VERSION" \
+  tunnel --no-autoupdate run --token "$TUNNEL_TOKEN"
+
+chmod 600 "$CREDENTIALS_FILE" "$ENV_FILE"
+
+echo "TeploTEC ERPNext bootstrap completed"
