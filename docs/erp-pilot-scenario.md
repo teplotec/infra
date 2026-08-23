@@ -44,13 +44,28 @@ Pull-request image CI runs the pilot twice on the fresh Ukrainian-first ERPNext 
 
 ## Production-like site
 
-After the pilot code is merged and its immutable image is deployed, create the pilot explicitly on CX33:
+After the pilot code is merged and its immutable image is deployed, synchronize the restricted host helper with the Ansible host playbook. The playbook copies the repository-owned `scripts/erp-admin` to `/usr/local/sbin/teplotec-erp-admin` without changing the runner registration when it is already present.
+
+Then run the manual GitHub Actions workflow:
+
+```text
+Actions -> ERP Pilot -> Run workflow
+confirmation: CREATE PILOT
+```
+
+The workflow runs on the restricted CX33 self-hosted runner and calls only:
+
+```text
+sudo /usr/local/sbin/teplotec-erp-admin pilot
+```
+
+The helper creates or resumes the pilot through `bench execute` and immediately runs `verify_pilot_scenario`.
+
+For break-glass operator use, the equivalent direct commands remain:
 
 ```bash
 ssh teplotec-erp 'cd /opt/teplotec/erpnext/gitops && docker compose --project-name teplotec-erp --env-file erpnext.env -f docker-compose.yml exec -T backend bench --site erp.teplotec.com execute teplotec_erp.pilot.create_pilot_scenario'
 ```
-
-Verify it with:
 
 ```bash
 ssh teplotec-erp 'cd /opt/teplotec/erpnext/gitops && docker compose --project-name teplotec-erp --env-file erpnext.env -f docker-compose.yml exec -T backend bench --site erp.teplotec.com execute teplotec_erp.pilot.verify_pilot_scenario'
