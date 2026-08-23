@@ -1,9 +1,9 @@
 [project]
 name = "teplotec_erp"
 authors = [
-  { name = "TeploTEC" }
+  { name = "TEPLOTEC" }
 ]
-description = "TeploTEC extensions and Ukrainian localization for ERPNext"
+description = "TEPLOTEC extensions, Frappe CRM integration, and Ukrainian localization for ERPNext"
 requires-python = ">=3.12"
 readme = "README.md"
 dynamic = ["version"]
@@ -16,3 +16,4 @@ build-backend = "flit_core.buildapi"
 [tool.bench.frappe-dependencies]
 frappe = ">=16.0.0,<17.0.0"
 erpnext = ">=16.0.0,<17.0.0"
+crm = ">=1.80.0,<2.0.0"
