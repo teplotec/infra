@@ -34,15 +34,15 @@ Stock defaults are kept intentionally simple:
 
 - Item Naming By: `Item Code`
 - Default Stock UOM: `Nos`
-- Default Warehouse: `Stores - TTEC`
+- Default Warehouse: `Main Warehouse - TTEC`
 
-ERPNext already creates the standard company warehouses. TeploTEC uses them rather than creating duplicates:
+ERPNext creates its own standard company warehouses during setup. Their visible names can be translated by the active system language, so Master Data v1 does not depend on those names. Instead it discovers the company warehouse root structurally and adds three stable TeploTEC-managed nodes:
 
-- Main warehouse: `Stores - TTEC`
-- In transit: `Goods In Transit - TTEC`
-- Project/site parent: `Project Sites - TTEC` - added by TeploTEC as a group warehouse
+- `Main Warehouse - TTEC` - canonical general-purpose warehouse
+- `In Transit - TTEC` - canonical transit warehouse with Warehouse Type `Transit`
+- `Project Sites - TTEC` - group warehouse for future per-project/site warehouses
 
-Individual project-site warehouses will be created later when the project model is defined.
+The ERPNext standard warehouses remain untouched. Individual project-site warehouses will be created later when the project model is defined.
 
 ## Item Groups
 
