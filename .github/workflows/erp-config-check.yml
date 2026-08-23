@@ -43,7 +43,7 @@ jobs:
               "timezone": "Europe/Kyiv",
               "currency": "UAH",
               "company_name": "TEPLOTEC",
-              "company_abbr": "TTEC",
+              "company_abbr": "TEC",
               "setup_demo": 0,
               "enable_telemetry": 0,
           }
