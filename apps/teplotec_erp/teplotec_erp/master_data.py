@@ -121,12 +121,16 @@ def _require_company():
 def _rename_legacy_brand_nodes():
     for doctype, renames in LEGACY_BRAND_RENAMES.items():
         for old_name, new_name in renames:
-            if not frappe.db.exists(doctype, old_name):
+            actual_old = frappe.db.get_value(doctype, {"name": old_name}, "name")
+            if actual_old != old_name:
                 continue
-            if frappe.db.exists(doctype, new_name):
+
+            actual_new = frappe.db.get_value(doctype, {"name": new_name}, "name")
+            if actual_new == new_name:
                 raise RuntimeError(
                     f"Cannot normalize {doctype} {old_name!r}: target {new_name!r} already exists"
                 )
+
             rename_doc(
                 doctype,
                 old_name,
@@ -196,11 +200,11 @@ def _ensure_tree_node(doctype, name, name_field, parent_field, parent, is_group)
         existing = frappe.get_doc(doctype, name)
         actual_parent = existing.get(parent_field)
         actual_is_group = int(existing.get("is_group") or 0)
-        if actual_parent != parent or actual_is_group != is_group:
+        if existing.name != name or actual_parent != parent or actual_is_group != is_group:
             raise RuntimeError(
                 f"Managed {doctype} {name!r} drifted: "
-                f"parent={actual_parent!r}, is_group={actual_is_group}; "
-                f"expected parent={parent!r}, is_group={is_group}"
+                f"name={existing.name!r}, parent={actual_parent!r}, is_group={actual_is_group}; "
+                f"expected name={name!r}, parent={parent!r}, is_group={is_group}"
             )
         return
 
@@ -227,7 +231,8 @@ def _ensure_warehouse(warehouse_name, parent_warehouse, is_group, warehouse_type
     if frappe.db.exists("Warehouse", expected_name):
         warehouse = frappe.get_doc("Warehouse", expected_name)
         mismatch = (
-            warehouse.parent_warehouse != parent_warehouse
+            warehouse.name != expected_name
+            or warehouse.parent_warehouse != parent_warehouse
             or warehouse.company != COMPANY_NAME
             or int(warehouse.is_group or 0) != is_group
             or (warehouse_type is not None and warehouse.warehouse_type != warehouse_type)
