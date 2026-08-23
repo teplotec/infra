@@ -1,0 +1,28 @@
+name: ERP Demo Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type SEED DEMO to create or refresh version-controlled demo data"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erp-production-admin
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.confirmation == 'SEED DEMO'
+    runs-on: [self-hosted, linux, x64, teplotec-erp-admin]
+    environment: production
+
+    steps:
+      - name: Seed and verify TEPLOTEC CRM demo data
+        run: sudo /usr/local/sbin/teplotec-erp-admin demo-seed
