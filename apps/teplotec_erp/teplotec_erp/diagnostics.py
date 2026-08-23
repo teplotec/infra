@@ -10,7 +10,7 @@ from teplotec_erp.master_data import (
     REQUIRED_UOMS,
     SUPPLIER_GROUPS,
     TRANSIT_WAREHOUSE,
-    WAREHOUSE_ROOT,
+    get_warehouse_root,
 )
 
 
@@ -66,23 +66,10 @@ def verify_master_data_v1():
     if missing_uoms:
         raise AssertionError(f"Required UOMs are missing: {missing_uoms}")
 
-    for warehouse in (WAREHOUSE_ROOT, MAIN_WAREHOUSE, TRANSIT_WAREHOUSE, PROJECT_SITES_WAREHOUSE):
-        if not frappe.db.exists("Warehouse", warehouse):
-            raise AssertionError(f"Required warehouse is missing: {warehouse}")
-
-    project_sites = frappe.get_doc("Warehouse", PROJECT_SITES_WAREHOUSE)
-    warehouse_mismatch = {
-        "parent_warehouse": (project_sites.parent_warehouse, WAREHOUSE_ROOT),
-        "company": (project_sites.company, COMPANY_NAME),
-        "is_group": (int(project_sites.is_group or 0), 1),
-    }
-    warehouse_mismatch = {
-        field: {"actual": actual, "expected": expected}
-        for field, (actual, expected) in warehouse_mismatch.items()
-        if actual != expected
-    }
-    if warehouse_mismatch:
-        raise AssertionError(f"Project Sites warehouse mismatch: {warehouse_mismatch}")
+    warehouse_root = get_warehouse_root()
+    _verify_warehouse(MAIN_WAREHOUSE, warehouse_root, is_group=0)
+    _verify_warehouse(TRANSIT_WAREHOUSE, warehouse_root, is_group=0, warehouse_type="Transit")
+    _verify_warehouse(PROJECT_SITES_WAREHOUSE, warehouse_root, is_group=1)
 
     settings = frappe.get_single("Stock Settings")
     expected_stock_settings = {
@@ -105,6 +92,7 @@ def verify_master_data_v1():
         "supplier_groups": len(SUPPLIER_GROUPS),
         "uoms": len(REQUIRED_UOMS),
         "default_warehouse": MAIN_WAREHOUSE,
+        "transit_warehouse": TRANSIT_WAREHOUSE,
         "project_sites_warehouse": PROJECT_SITES_WAREHOUSE,
     }
 
@@ -123,6 +111,28 @@ def _verify_tree_nodes(doctype, parent_field, expected_nodes):
                 f"parent={actual_parent!r}, is_group={actual_is_group}; "
                 f"expected parent={parent!r}, is_group={is_group}"
             )
+
+
+def _verify_warehouse(name, parent, is_group, warehouse_type=None):
+    if not frappe.db.exists("Warehouse", name):
+        raise AssertionError(f"Managed Warehouse is missing: {name}")
+
+    warehouse = frappe.get_doc("Warehouse", name)
+    expected = {
+        "parent_warehouse": parent,
+        "company": COMPANY_NAME,
+        "is_group": is_group,
+    }
+    if warehouse_type is not None:
+        expected["warehouse_type"] = warehouse_type
+
+    mismatch = {
+        field: {"actual": warehouse.get(field), "expected": value}
+        for field, value in expected.items()
+        if warehouse.get(field) != value
+    }
+    if mismatch:
+        raise AssertionError(f"Managed Warehouse {name!r} mismatch: {mismatch}")
 
 
 def verify_ukrainian_first_setup():
