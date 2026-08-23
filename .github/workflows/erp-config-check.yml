@@ -6,6 +6,7 @@ on:
       - "config/erp-setup.json"
       - "scripts/erp-admin"
       - "scripts/install-github-runner"
+      - "ansible/**"
       - "apps/teplotec_erp/**"
       - ".github/workflows/erp-reset.yml"
       - ".github/workflows/erp-config-check.yml"
@@ -55,6 +56,11 @@ jobs:
           if mismatches:
               raise SystemExit(f"Invalid TeploTEC ERP setup profile: {mismatches}")
           PY
+
+      - name: Validate Ansible host configuration
+        run: |
+          python3 -m pip install --disable-pip-version-check ansible-core
+          ansible-playbook --syntax-check ansible/playbooks/erp-host.yml
 
       - name: Compile TeploTEC ERP Python
         run: python3 -m compileall -q apps/teplotec_erp/teplotec_erp
