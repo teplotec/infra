@@ -1,0 +1,480 @@
+{
+  "version": 1,
+  "dataset": "TEPLOTEC CRM Demo v1",
+  "description": "Curated, repeatable demo data for exploring the TEPLOTEC sales model. This is not CI pilot data and must never be seeded automatically by migrate or deploy.",
+  "leads": [
+    {
+      "id": "b2c-ivan-petrenko",
+      "first_name": "Іван",
+      "last_name": "Петренко",
+      "email": "demo.ivan.petrenko@teplotec.invalid",
+      "mobile_no": "+380670000101",
+      "status": "New",
+      "source": "Advertisement"
+    },
+    {
+      "id": "b2c-oksana-bondar",
+      "first_name": "Оксана",
+      "last_name": "Бондар",
+      "email": "demo.oksana.bondar@teplotec.invalid",
+      "mobile_no": "+380670000102",
+      "status": "Contacted",
+      "source": "Reference",
+      "deal": {
+        "status": "Qualification",
+        "expected_deal_value": 310000,
+        "expected_closure_days": 35,
+        "next_step": "Уточнити тепловтрати будинку та площу ділянки"
+      }
+    },
+    {
+      "id": "b2c-mykola-shevchenko",
+      "first_name": "Микола",
+      "last_name": "Шевченко",
+      "email": "demo.mykola.shevchenko@teplotec.invalid",
+      "mobile_no": "+380670000103",
+      "status": "Nurture",
+      "source": "Email",
+      "deal": {
+        "status": "Proposal/Quotation",
+        "expected_deal_value": 420000,
+        "expected_closure_days": 21,
+        "next_step": "Підготувати два варіанти кошторису"
+      }
+    },
+    {
+      "id": "b2c-nataliia-kovalenko",
+      "first_name": "Наталія",
+      "last_name": "Коваленко",
+      "email": "demo.nataliia.kovalenko@teplotec.invalid",
+      "mobile_no": "+380670000104",
+      "status": "Qualified",
+      "source": "Advertisement",
+      "deal": {
+        "status": "Negotiation",
+        "expected_deal_value": 365000,
+        "expected_closure_days": 14,
+        "next_step": "Узгодити фінальну комплектацію теплового насоса"
+      }
+    },
+    {
+      "id": "b2c-pavlo-tkachenko",
+      "first_name": "Павло",
+      "last_name": "Ткаченко",
+      "email": "demo.pavlo.tkachenko@teplotec.invalid",
+      "mobile_no": "+380670000105",
+      "status": "Unqualified",
+      "source": "Reference",
+      "lost_reason": "Pricing"
+    },
+    {
+      "id": "b2c-iryna-hnatiuk",
+      "first_name": "Ірина",
+      "last_name": "Гнатюк",
+      "email": "demo.iryna.hnatiuk@teplotec.invalid",
+      "mobile_no": "+380670000106",
+      "status": "Contacted",
+      "source": "Existing Customer",
+      "deal": {
+        "status": "Ready to Close",
+        "expected_deal_value": 285000,
+        "expected_closure_days": 7,
+        "next_step": "Погодити дату старту буріння"
+      }
+    },
+    {
+      "id": "b2c-roman-koval",
+      "first_name": "Роман",
+      "last_name": "Коваль",
+      "email": "demo.roman.koval@teplotec.invalid",
+      "mobile_no": "+380670000107",
+      "status": "New",
+      "source": "Email"
+    },
+    {
+      "id": "b2c-yuliia-moroz",
+      "first_name": "Юлія",
+      "last_name": "Мороз",
+      "email": "demo.yuliia.moroz@teplotec.invalid",
+      "mobile_no": "+380670000108",
+      "status": "Nurture",
+      "source": "Advertisement"
+    },
+    {
+      "id": "b2c-bohdan-marchenko",
+      "first_name": "Богдан",
+      "last_name": "Марченко",
+      "email": "demo.bohdan.marchenko@teplotec.invalid",
+      "mobile_no": "+380670000109",
+      "status": "Qualified",
+      "source": "Reference",
+      "deal": {
+        "status": "Won",
+        "expected_deal_value": 380000,
+        "deal_value": 372000,
+        "expected_closure_days": 0,
+        "next_step": "Передати замовлення в проєктування"
+      }
+    },
+    {
+      "id": "b2c-tetiana-kravets",
+      "first_name": "Тетяна",
+      "last_name": "Кравець",
+      "email": "demo.tetiana.kravets@teplotec.invalid",
+      "mobile_no": "+380670000110",
+      "status": "Contacted",
+      "source": "Email"
+    },
+    {
+      "id": "b2b-greenpark",
+      "first_name": "Андрій",
+      "last_name": "Романюк",
+      "email": "demo.greenpark@teplotec.invalid",
+      "mobile_no": "+380670000111",
+      "organization": "GreenPark Development",
+      "website": "https://greenpark.example.com",
+      "no_of_employees": "11-50",
+      "annual_revenue": 120000000,
+      "status": "Contacted",
+      "source": "Advertisement",
+      "deal": {
+        "status": "Qualification",
+        "expected_deal_value": 1800000,
+        "expected_closure_days": 60,
+        "next_step": "Отримати генеральний план котеджного містечка"
+      }
+    },
+    {
+      "id": "b2b-comfort-house",
+      "first_name": "Марина",
+      "last_name": "Левченко",
+      "email": "demo.comfort.house@teplotec.invalid",
+      "mobile_no": "+380670000112",
+      "organization": "ОСББ Комфортний Дім 24",
+      "no_of_employees": "1-10",
+      "status": "Qualified",
+      "source": "Existing Customer",
+      "deal": {
+        "status": "Demo/Making",
+        "expected_deal_value": 720000,
+        "expected_closure_days": 45,
+        "next_step": "Провести технічне обстеження будинку"
+      }
+    },
+    {
+      "id": "b2b-mednova",
+      "first_name": "Олег",
+      "last_name": "Кушнір",
+      "email": "demo.mednova@teplotec.invalid",
+      "mobile_no": "+380670000113",
+      "organization": "Клініка MedNova",
+      "website": "https://mednova.example.com",
+      "no_of_employees": "51-200",
+      "annual_revenue": 85000000,
+      "status": "Qualified",
+      "source": "Email",
+      "deal": {
+        "status": "Won",
+        "expected_deal_value": 980000,
+        "deal_value": 955000,
+        "expected_closure_days": 0,
+        "next_step": "Передати в виконання та погодити календар робіт"
+      }
+    },
+    {
+      "id": "b2b-hotel-dnipro",
+      "first_name": "Світлана",
+      "last_name": "Руденко",
+      "email": "demo.hotel.dnipro@teplotec.invalid",
+      "mobile_no": "+380670000114",
+      "organization": "Готель Дніпро",
+      "no_of_employees": "51-200",
+      "annual_revenue": 62000000,
+      "status": "Qualified",
+      "source": "Reference",
+      "deal": {
+        "status": "Lost",
+        "expected_deal_value": 1300000,
+        "expected_closure_days": -3,
+        "lost_reason": "Pricing",
+        "next_step": "Закрито - бюджет клієнта нижчий за проєктний"
+      }
+    },
+    {
+      "id": "public-lyceum-17",
+      "first_name": "Ігор",
+      "last_name": "Савчук",
+      "email": "demo.lyceum17@teplotec.invalid",
+      "mobile_no": "+380670000115",
+      "organization": "Ліцей №17",
+      "no_of_employees": "51-200",
+      "status": "Qualified",
+      "source": "Email",
+      "deal": {
+        "status": "Proposal/Quotation",
+        "expected_deal_value": 650000,
+        "expected_closure_days": 50,
+        "next_step": "Підготувати технічну частину для закупівлі"
+      }
+    },
+    {
+      "id": "b2b-agroterm",
+      "first_name": "Віктор",
+      "last_name": "Остапенко",
+      "email": "demo.agroterm@teplotec.invalid",
+      "mobile_no": "+380670000116",
+      "organization": "Агрокомплекс АгроТерм",
+      "no_of_employees": "201-500",
+      "annual_revenue": 340000000,
+      "status": "Contacted",
+      "source": "Advertisement",
+      "deal": {
+        "status": "Qualification",
+        "expected_deal_value": 2400000,
+        "expected_closure_days": 75,
+        "next_step": "Зібрати режими споживання тепла по корпусах"
+      }
+    },
+    {
+      "id": "b2b-logistic-west",
+      "first_name": "Дмитро",
+      "last_name": "Зінченко",
+      "email": "demo.logistic.west@teplotec.invalid",
+      "mobile_no": "+380670000117",
+      "organization": "Logistic Park West",
+      "website": "https://logistic-west.example.com",
+      "no_of_employees": "201-500",
+      "annual_revenue": 510000000,
+      "status": "Qualified",
+      "source": "Reference",
+      "deal": {
+        "status": "Negotiation",
+        "expected_deal_value": 3200000,
+        "expected_closure_days": 28,
+        "next_step": "Узгодити SLA та етапність запуску"
+      }
+    },
+    {
+      "id": "b2b-ecovillage",
+      "first_name": "Катерина",
+      "last_name": "Поліщук",
+      "email": "demo.ecovillage@teplotec.invalid",
+      "mobile_no": "+380670000118",
+      "organization": "EcoVillage Bucha",
+      "no_of_employees": "11-50",
+      "annual_revenue": 180000000,
+      "status": "Qualified",
+      "source": "Advertisement",
+      "deal": {
+        "status": "Ready to Close",
+        "expected_deal_value": 2100000,
+        "expected_closure_days": 10,
+        "next_step": "Підписати договір на першу чергу"
+      }
+    },
+    {
+      "id": "b2b-smak",
+      "first_name": "Артур",
+      "last_name": "Мельник",
+      "email": "demo.smak@teplotec.invalid",
+      "mobile_no": "+380670000119",
+      "organization": "Мережа ресторанів Смак",
+      "no_of_employees": "201-500",
+      "annual_revenue": 260000000,
+      "status": "Qualified",
+      "source": "Existing Customer",
+      "deal": {
+        "status": "Lost",
+        "expected_deal_value": 560000,
+        "expected_closure_days": -12,
+        "lost_reason": "Pricing",
+        "next_step": "Закрито - клієнт залишив газове опалення"
+      }
+    },
+    {
+      "id": "b2b-vector",
+      "first_name": "Сергій",
+      "last_name": "Дяченко",
+      "email": "demo.vector@teplotec.invalid",
+      "mobile_no": "+380670000120",
+      "organization": "Завод Вектор",
+      "no_of_employees": "501-1000",
+      "annual_revenue": 900000000,
+      "status": "Contacted",
+      "source": "Email",
+      "deal": {
+        "status": "Demo/Making",
+        "expected_deal_value": 4800000,
+        "expected_closure_days": 90,
+        "next_step": "Підготувати енергетичну модель виробничого корпусу"
+      }
+    },
+    {
+      "id": "b2b-forum",
+      "first_name": "Аліна",
+      "last_name": "Бойко",
+      "email": "demo.forum@teplotec.invalid",
+      "mobile_no": "+380670000121",
+      "organization": "Бізнес-центр Forum",
+      "no_of_employees": "51-200",
+      "annual_revenue": 130000000,
+      "status": "Qualified",
+      "source": "Reference",
+      "deal": {
+        "status": "Proposal/Quotation",
+        "expected_deal_value": 1650000,
+        "expected_closure_days": 32,
+        "next_step": "Передати комерційну пропозицію власнику"
+      }
+    },
+    {
+      "id": "b2b-north-hub",
+      "first_name": "Максим",
+      "last_name": "Литвин",
+      "email": "demo.northhub@teplotec.invalid",
+      "mobile_no": "+380670000122",
+      "organization": "Складський комплекс North Hub",
+      "no_of_employees": "51-200",
+      "annual_revenue": 220000000,
+      "status": "Contacted",
+      "source": "Advertisement",
+      "deal": {
+        "status": "Qualification",
+        "expected_deal_value": 2750000,
+        "expected_closure_days": 55,
+        "next_step": "Отримати плани складів і температурні режими"
+      }
+    },
+    {
+      "id": "public-hospital",
+      "first_name": "Лариса",
+      "last_name": "Козак",
+      "email": "demo.hospital@teplotec.invalid",
+      "mobile_no": "+380670000123",
+      "organization": "Міська клінічна лікарня",
+      "no_of_employees": "501-1000",
+      "status": "Nurture",
+      "source": "Email"
+    },
+    {
+      "id": "b2b-pulse",
+      "first_name": "Владислав",
+      "last_name": "Черненко",
+      "email": "demo.pulse@teplotec.invalid",
+      "mobile_no": "+380670000124",
+      "organization": "Фітнес-клуб Pulse",
+      "no_of_employees": "51-200",
+      "status": "Contacted",
+      "source": "Reference"
+    },
+    {
+      "id": "b2b-carpathia",
+      "first_name": "Марія",
+      "last_name": "Федорчук",
+      "email": "demo.carpathia@teplotec.invalid",
+      "mobile_no": "+380670000125",
+      "organization": "Hotel Carpathia",
+      "no_of_employees": "51-200",
+      "annual_revenue": 95000000,
+      "status": "Qualified",
+      "source": "Advertisement",
+      "deal": {
+        "status": "Qualification",
+        "expected_deal_value": 1900000,
+        "expected_closure_days": 70,
+        "next_step": "Оцінити пікове навантаження SPA-зони"
+      }
+    },
+    {
+      "id": "public-future-school",
+      "first_name": "Анна",
+      "last_name": "Романенко",
+      "email": "demo.future.school@teplotec.invalid",
+      "mobile_no": "+380670000126",
+      "organization": "Приватна школа Future",
+      "no_of_employees": "51-200",
+      "status": "Qualified",
+      "source": "Email",
+      "deal": {
+        "status": "Proposal/Quotation",
+        "expected_deal_value": 830000,
+        "expected_closure_days": 40,
+        "next_step": "Погодити рішення з архітектором нового корпусу"
+      }
+    },
+    {
+      "id": "b2b-sunny-field",
+      "first_name": "Тарас",
+      "last_name": "Гаврилюк",
+      "email": "demo.sunny.field@teplotec.invalid",
+      "mobile_no": "+380670000127",
+      "organization": "Фермерське господарство Сонячне Поле",
+      "no_of_employees": "11-50",
+      "annual_revenue": 74000000,
+      "status": "Qualified",
+      "source": "Reference",
+      "deal": {
+        "status": "Won",
+        "expected_deal_value": 1120000,
+        "deal_value": 1090000,
+        "expected_closure_days": 0,
+        "next_step": "Передати об'єкт у проєктування"
+      }
+    },
+    {
+      "id": "b2b-riverside",
+      "first_name": "Євген",
+      "last_name": "Петрик",
+      "email": "demo.riverside@teplotec.invalid",
+      "mobile_no": "+380670000128",
+      "organization": "Riverside Development",
+      "no_of_employees": "51-200",
+      "annual_revenue": 410000000,
+      "status": "Qualified",
+      "source": "Advertisement",
+      "deal": {
+        "status": "Lost",
+        "expected_deal_value": 3600000,
+        "expected_closure_days": -20,
+        "lost_reason": "Pricing",
+        "next_step": "Закрито - інвестор скоротив бюджет"
+      }
+    },
+    {
+      "id": "b2b-tech-campus",
+      "first_name": "Олена",
+      "last_name": "Гринь",
+      "email": "demo.tech.campus@teplotec.invalid",
+      "mobile_no": "+380670000129",
+      "organization": "Tech Campus Kyiv",
+      "no_of_employees": "201-500",
+      "annual_revenue": 380000000,
+      "status": "Qualified",
+      "source": "Existing Customer",
+      "deal": {
+        "status": "Ready to Close",
+        "expected_deal_value": 2950000,
+        "expected_closure_days": 9,
+        "next_step": "Підписати фінальний бюджет і графік"
+      }
+    },
+    {
+      "id": "b2b-budmarket",
+      "first_name": "Олександр",
+      "last_name": "Демчук",
+      "email": "demo.budmarket@teplotec.invalid",
+      "mobile_no": "+380670000130",
+      "organization": "BudMarket",
+      "no_of_employees": "201-500",
+      "annual_revenue": 470000000,
+      "status": "Qualified",
+      "source": "Email",
+      "deal": {
+        "status": "Negotiation",
+        "expected_deal_value": 2250000,
+        "expected_closure_days": 24,
+        "next_step": "Узгодити гарантійні умови і сервісний контракт"
+      }
+    }
+  ]
+}
