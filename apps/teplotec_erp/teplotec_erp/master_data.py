@@ -2,7 +2,7 @@ import frappe
 
 
 COMPANY_NAME = "TEPLOTEC"
-COMPANY_ABBR = "TTEC"
+COMPANY_ABBR = "TEC"
 
 ITEM_GROUPS = (
     ("TeploTEC", "All Item Groups", 1),
