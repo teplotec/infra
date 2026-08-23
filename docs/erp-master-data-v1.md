@@ -12,7 +12,7 @@ This means a fresh `ERP Reset` follows the same path as CI:
 
 ```text
 ERPNext reinstall
-  -> setup wizard creates TEPLOTEC / TTEC
+  -> setup wizard creates TEPLOTEC / TEC
   -> migrate
   -> teplotec_erp after_migrate
   -> Master Data v1
@@ -26,7 +26,7 @@ The managed structure is idempotent. Missing managed records are created. Existi
 The baseline expects the version-controlled setup profile to have already created:
 
 - Company: `TEPLOTEC`
-- Abbreviation: `TTEC`
+- Abbreviation: `TEC`
 - Currency: `UAH`
 - Timezone: `Europe/Kyiv`
 
@@ -34,13 +34,13 @@ Stock defaults are kept intentionally simple:
 
 - Item Naming By: `Item Code`
 - Default Stock UOM: `Nos`
-- Default Warehouse: `Main Warehouse - TTEC`
+- Default Warehouse: `Main Warehouse - TEC`
 
 ERPNext creates its own standard company warehouses during setup. Their visible names can be translated by the active system language, so Master Data v1 does not depend on those names. Instead it discovers the company warehouse root structurally and adds three stable TeploTEC-managed nodes:
 
-- `Main Warehouse - TTEC` - canonical general-purpose warehouse
-- `In Transit - TTEC` - canonical transit warehouse with Warehouse Type `Transit`
-- `Project Sites - TTEC` - group warehouse for future per-project/site warehouses
+- `Main Warehouse - TEC` - canonical general-purpose warehouse
+- `In Transit - TEC` - canonical transit warehouse with Warehouse Type `Transit`
+- `Project Sites - TEC` - group warehouse for future per-project/site warehouses
 
 The ERPNext standard warehouses remain untouched. Individual project-site warehouses will be created later when the project model is defined.
 
