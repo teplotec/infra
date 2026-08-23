@@ -209,7 +209,8 @@ def _get_or_create_customer(lead):
     customer.territory = "Ukraine"
     customer.default_currency = "UAH"
     customer.flags.ignore_permissions = True
-    return customer.insert(ignore_permissions=True)
+    customer.save(ignore_permissions=True)
+    return customer
 
 
 def _get_or_create_sales_order(quotation, customer):
