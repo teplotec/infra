@@ -8,8 +8,8 @@ GITOPS_DIR="$ROOT_DIR/gitops"
 ENV_FILE="$GITOPS_DIR/erpnext.env"
 COMPOSE_FILE="$GITOPS_DIR/docker-compose.yml"
 PROJECT_NAME="teplotec-erp"
-TEPLOTEC_APP="teplotec_erp"
 TEPLOTEC_IMAGE="ghcr.io/teplotec/erpnext"
+REQUIRED_APPS=(crm teplotec_erp)
 
 compose() {
   docker compose \
@@ -109,12 +109,27 @@ print(json.dumps(config, separators=(",", ":"), ensure_ascii=False))
 PY
 }
 
-ensure_teplotec_app_installed() {
-  if ! compose exec -T backend bash -lc \
-      "bench --site '$ERP_HOSTNAME' list-apps | grep -q '^$TEPLOTEC_APP'"; then
-    echo "Installing $TEPLOTEC_APP on $ERP_HOSTNAME..."
-    compose exec -T backend bench --site "$ERP_HOSTNAME" install-app "$TEPLOTEC_APP"
-  fi
+ensure_required_apps_installed() {
+  local app
+  for app in "${REQUIRED_APPS[@]}"; do
+    if compose exec -T backend bash -lc \
+        "bench --site '$ERP_HOSTNAME' list-apps | grep -q '^$app'"; then
+      continue
+    fi
+
+    echo "Installing $app on $ERP_HOSTNAME..."
+    compose exec -T backend bench --site "$ERP_HOSTNAME" install-app "$app"
+  done
+}
+
+verify_required_apps_in_image() {
+  local app
+  for app in "${REQUIRED_APPS[@]}"; do
+    if ! compose exec -T backend bash -lc "grep -qx '$app' sites/apps.txt"; then
+      echo "$app is missing from the deployed image" >&2
+      exit 1
+    fi
+  done
 }
 
 require_runtime
@@ -140,14 +155,14 @@ case "${1:-}" in
     ;;
 
   pilot)
-    ensure_teplotec_app_installed
-    echo "Creating or resuming the disposable TeploTEC sales pilot..."
+    ensure_required_apps_installed
+    echo "Creating or resuming the disposable TEPLOTEC ERPNext downstream pilot..."
     compose exec -T backend \
       bench --site "$ERP_HOSTNAME" execute teplotec_erp.pilot.create_pilot_scenario
-    echo "Verifying the TeploTEC sales pilot..."
+    echo "Verifying the TEPLOTEC ERPNext downstream pilot..."
     compose exec -T backend \
       bench --site "$ERP_HOSTNAME" execute teplotec_erp.pilot.verify_pilot_scenario
-    echo "TeploTEC sales pilot created and verified."
+    echo "TEPLOTEC ERPNext downstream pilot created and verified."
     ;;
 
   deploy-image)
@@ -184,17 +199,13 @@ case "${1:-}" in
     compose pull
     compose up -d --remove-orphans
 
-    if ! compose exec -T backend bash -lc "grep -qx '$TEPLOTEC_APP' sites/apps.txt"; then
-      echo "$TEPLOTEC_APP is missing from the deployed image" >&2
-      exit 1
-    fi
-
-    ensure_teplotec_app_installed
+    verify_required_apps_in_image
+    ensure_required_apps_installed
     compose exec -T backend bench --site "$ERP_HOSTNAME" migrate
     compose exec -T backend bench --site "$ERP_HOSTNAME" clear-cache
 
     unset registry_user registry_token
-    echo "Deployed $image_ref and synchronized $TEPLOTEC_APP."
+    echo "Deployed $image_ref and synchronized Frappe CRM plus TEPLOTEC ERP."
     ;;
 
   reset)
@@ -226,7 +237,7 @@ case "${1:-}" in
       frappe.desk.page.setup_wizard.setup_wizard.setup_complete \
       --args "[$setup_args]"
 
-    ensure_teplotec_app_installed
+    ensure_required_apps_installed
     compose exec -T backend bench --site "$ERP_HOSTNAME" clear-cache
     compose exec -T backend bench --site "$ERP_HOSTNAME" migrate
 

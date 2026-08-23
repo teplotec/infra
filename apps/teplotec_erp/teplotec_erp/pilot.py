@@ -12,7 +12,7 @@ PILOT_RATE = 250000
 
 
 def create_pilot_scenario():
-    """Create or resume the first disposable TeploTEC sales pilot."""
+    """Create or resume the first disposable TEPLOTEC ERPNext downstream pilot."""
     item = _get_or_create_item()
     lead = _get_or_create_lead()
     opportunity = _get_or_create_opportunity(lead, item)
@@ -26,7 +26,7 @@ def create_pilot_scenario():
 
 
 def verify_pilot_scenario():
-    """Verify that the disposable pilot exercises the standard ERPNext sales spine."""
+    """Verify that the disposable pilot exercises the standard ERPNext execution spine."""
     if not frappe.db.exists("Item", PILOT_ITEM_CODE):
         raise AssertionError("Pilot Item is missing")
     item = frappe.get_doc("Item", PILOT_ITEM_CODE)
@@ -114,7 +114,7 @@ def _get_or_create_item():
             "is_sales_item": 1,
             "is_purchase_item": 0,
             "standard_rate": PILOT_RATE,
-            "description": "Disposable pilot service item for the first TeploTEC sales flow.",
+            "description": "Disposable pilot service item for the TEPLOTEC ERPNext downstream baseline.",
         }
     ).insert(ignore_permissions=True)
 
@@ -255,7 +255,7 @@ def _get_or_create_project(customer, sales_order):
             "status": "Open",
             "expected_start_date": nowdate(),
             "expected_end_date": add_days(nowdate(), 60),
-            "notes": f"{PILOT_ID}: disposable end-to-end TeploTEC sales pilot.",
+            "notes": f"{PILOT_ID}: disposable TEPLOTEC ERPNext downstream baseline.",
         }
     ).insert(ignore_permissions=True)
 

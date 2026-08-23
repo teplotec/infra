@@ -14,7 +14,7 @@ USER frappe
 RUN cd /opt/teplotec_erp && \
     git init -b main && \
     git add . && \
-    git -c user.name='TeploTEC Build' -c user.email='build@teplotec.com' commit -m 'Build teplotec_erp'
+    git -c user.name='TEPLOTEC Build' -c user.email='build@teplotec.com' commit -m 'Build teplotec_erp'
 
 RUN --mount=type=secret,id=apps_json,target=/opt/frappe/apps.json,uid=1000,gid=1000 \
     : "${CACHE_BUST}" && \
@@ -33,6 +33,7 @@ RUN --mount=type=secret,id=apps_json,target=/opt/frappe/apps.json,uid=1000,gid=1
       awk '1; END { print "teplotec_erp" }' sites/apps.txt > sites/apps.txt.tmp && \
       mv sites/apps.txt.tmp sites/apps.txt; \
     fi && \
+    grep -qxF crm sites/apps.txt && \
     grep -qxF teplotec_erp sites/apps.txt && \
     find apps -mindepth 1 -path '*/.git' -print0 | xargs -0 -r rm -rf
 

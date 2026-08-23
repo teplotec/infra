@@ -24,6 +24,7 @@ env:
   IMAGE_NAME: ghcr.io/teplotec/erpnext
   FRAPPE_DOCKER_VERSION: v3.2.1
   ERPNEXT_VERSION: v16.31.1
+  FRAPPE_CRM_VERSION: v1.80.0
 
 jobs:
   build:
@@ -54,6 +55,10 @@ jobs:
             {
               "url": "https://github.com/frappe/erpnext",
               "branch": "$ERPNEXT_VERSION"
+            },
+            {
+              "url": "https://github.com/frappe/crm",
+              "branch": "$FRAPPE_CRM_VERSION"
             },
             {
               "url": "file:///opt/teplotec_erp",
@@ -179,7 +184,16 @@ jobs:
             --mariadb-user-host-login-scope='%' \
             --install-app erpnext
 
-      - name: Install TeploTEC ERP app
+      - name: Install Frappe CRM
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker exec teplotec-erp-smoke-backend \
+            bench --site ci.localhost install-app crm
+
+      - name: Install TEPLOTEC ERP app
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
@@ -188,7 +202,7 @@ jobs:
           docker exec teplotec-erp-smoke-backend \
             bench --site ci.localhost install-app teplotec_erp
 
-      - name: Apply TeploTEC setup profile
+      - name: Apply TEPLOTEC setup profile
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
@@ -232,19 +246,50 @@ jobs:
           docker exec teplotec-erp-smoke-backend \
             bench --site ci.localhost migrate
 
-      - name: Verify TeploTEC Ukrainian-first bootstrap
+      - name: Exercise legacy brand capitalization migration
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          backend="teplotec-erp-smoke-backend"
+
+          rename_doc() {
+            local doctype="$1"
+            local old_name="$2"
+            local new_name="$3"
+            docker exec "$backend" \
+              bench --site ci.localhost execute frappe.model.rename_doc.rename_doc \
+              --args "['$doctype','$old_name','$new_name']" \
+              --kwargs "{'force': True, 'ignore_permissions': True, 'show_alert': False}"
+          }
+
+          rename_doc "Item Group" "TEPLOTEC Equipment" "TeploTEC Equipment"
+          rename_doc "Item Group" "TEPLOTEC Consumables" "TeploTEC Consumables"
+          rename_doc "Item Group" "TEPLOTEC Tools" "TeploTEC Tools"
+          rename_doc "Item Group" "TEPLOTEC Services" "TeploTEC Services"
+          rename_doc "Item Group" "TEPLOTEC" "TeploTEC"
+          rename_doc "Customer Group" "TEPLOTEC Customers" "TeploTEC Customers"
+          rename_doc "Supplier Group" "TEPLOTEC Suppliers" "TeploTEC Suppliers"
+
+          docker exec "$backend" \
+            bench --site ci.localhost execute teplotec_erp.master_data.apply_master_data_v1
+
+      - name: Verify TEPLOTEC Ukrainian-first and Frappe CRM bootstrap
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
 
           docker exec teplotec-erp-smoke-backend \
-            bench --site ci.localhost list-apps | grep -q teplotec_erp
+            bench --site ci.localhost list-apps | grep -q '^crm'
+
+          docker exec teplotec-erp-smoke-backend \
+            bench --site ci.localhost list-apps | grep -q '^teplotec_erp'
 
           docker exec teplotec-erp-smoke-backend \
             bench --site ci.localhost execute teplotec_erp.diagnostics.verify_ukrainian_first_setup
 
-      - name: Exercise TeploTEC sales pilot
+      - name: Exercise ERPNext downstream baseline pilot
         if: github.event_name == 'pull_request'
         shell: bash
         run: |

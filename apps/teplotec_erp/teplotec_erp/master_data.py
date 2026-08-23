@@ -1,42 +1,55 @@
 import frappe
+from frappe.model.rename_doc import rename_doc
 
 
 COMPANY_NAME = "TEPLOTEC"
 COMPANY_ABBR = "TEC"
 
+LEGACY_BRAND_RENAMES = {
+    "Item Group": (
+        ("TeploTEC", "TEPLOTEC"),
+        ("TeploTEC Equipment", "TEPLOTEC Equipment"),
+        ("TeploTEC Consumables", "TEPLOTEC Consumables"),
+        ("TeploTEC Tools", "TEPLOTEC Tools"),
+        ("TeploTEC Services", "TEPLOTEC Services"),
+    ),
+    "Customer Group": (("TeploTEC Customers", "TEPLOTEC Customers"),),
+    "Supplier Group": (("TeploTEC Suppliers", "TEPLOTEC Suppliers"),),
+}
+
 ITEM_GROUPS = (
-    ("TeploTEC", "All Item Groups", 1),
-    ("TeploTEC Equipment", "TeploTEC", 1),
-    ("Heat Pumps", "TeploTEC Equipment", 0),
-    ("Controls & Automation", "TeploTEC Equipment", 0),
-    ("Geothermal Systems", "TeploTEC", 1),
+    ("TEPLOTEC", "All Item Groups", 1),
+    ("TEPLOTEC Equipment", "TEPLOTEC", 1),
+    ("Heat Pumps", "TEPLOTEC Equipment", 0),
+    ("Controls & Automation", "TEPLOTEC Equipment", 0),
+    ("Geothermal Systems", "TEPLOTEC", 1),
     ("Ground Loops", "Geothermal Systems", 0),
     ("Pipes & Fittings", "Geothermal Systems", 0),
     ("Manifolds", "Geothermal Systems", 0),
     ("Heat Transfer Fluids", "Geothermal Systems", 0),
-    ("HVAC & Hydronics", "TeploTEC", 1),
-    ("TeploTEC Consumables", "TeploTEC", 0),
-    ("TeploTEC Tools", "TeploTEC", 0),
-    ("TeploTEC Services", "TeploTEC", 1),
-    ("Design Services", "TeploTEC Services", 0),
-    ("Drilling Services", "TeploTEC Services", 0),
-    ("Installation Services", "TeploTEC Services", 0),
-    ("Commissioning Services", "TeploTEC Services", 0),
-    ("Maintenance Services", "TeploTEC Services", 0),
+    ("HVAC & Hydronics", "TEPLOTEC", 1),
+    ("TEPLOTEC Consumables", "TEPLOTEC", 0),
+    ("TEPLOTEC Tools", "TEPLOTEC", 0),
+    ("TEPLOTEC Services", "TEPLOTEC", 1),
+    ("Design Services", "TEPLOTEC Services", 0),
+    ("Drilling Services", "TEPLOTEC Services", 0),
+    ("Installation Services", "TEPLOTEC Services", 0),
+    ("Commissioning Services", "TEPLOTEC Services", 0),
+    ("Maintenance Services", "TEPLOTEC Services", 0),
 )
 
 CUSTOMER_GROUPS = (
-    ("TeploTEC Customers", "All Customer Groups", 1),
-    ("Residential Customers", "TeploTEC Customers", 0),
-    ("Commercial Customers", "TeploTEC Customers", 0),
-    ("Public Sector Customers", "TeploTEC Customers", 0),
+    ("TEPLOTEC Customers", "All Customer Groups", 1),
+    ("Residential Customers", "TEPLOTEC Customers", 0),
+    ("Commercial Customers", "TEPLOTEC Customers", 0),
+    ("Public Sector Customers", "TEPLOTEC Customers", 0),
 )
 
 SUPPLIER_GROUPS = (
-    ("TeploTEC Suppliers", "All Supplier Groups", 1),
-    ("Equipment Suppliers", "TeploTEC Suppliers", 0),
-    ("Material Suppliers", "TeploTEC Suppliers", 0),
-    ("Service Contractors", "TeploTEC Suppliers", 0),
+    ("TEPLOTEC Suppliers", "All Supplier Groups", 1),
+    ("Equipment Suppliers", "TEPLOTEC Suppliers", 0),
+    ("Material Suppliers", "TEPLOTEC Suppliers", 0),
+    ("Service Contractors", "TEPLOTEC Suppliers", 0),
 )
 
 REQUIRED_UOMS = {
@@ -61,6 +74,7 @@ def apply_master_data_v1_if_ready():
 
 def apply_master_data_v1():
     _require_company()
+    _rename_legacy_brand_nodes()
     _ensure_uoms()
     _ensure_item_groups()
     _ensure_customer_groups()
@@ -102,6 +116,29 @@ def _require_company():
         raise RuntimeError(
             f"Master Data v1 requires company {COMPANY_NAME!r} with abbreviation {COMPANY_ABBR!r}"
         )
+
+
+def _rename_legacy_brand_nodes():
+    for doctype, renames in LEGACY_BRAND_RENAMES.items():
+        for old_name, new_name in renames:
+            actual_old = frappe.db.get_value(doctype, {"name": old_name}, "name")
+            if actual_old != old_name:
+                continue
+
+            actual_new = frappe.db.get_value(doctype, {"name": new_name}, "name")
+            if actual_new == new_name:
+                raise RuntimeError(
+                    f"Cannot normalize {doctype} {old_name!r}: target {new_name!r} already exists"
+                )
+
+            rename_doc(
+                doctype,
+                old_name,
+                new_name,
+                force=True,
+                ignore_permissions=True,
+                show_alert=False,
+            )
 
 
 def _ensure_uoms():
@@ -163,11 +200,11 @@ def _ensure_tree_node(doctype, name, name_field, parent_field, parent, is_group)
         existing = frappe.get_doc(doctype, name)
         actual_parent = existing.get(parent_field)
         actual_is_group = int(existing.get("is_group") or 0)
-        if actual_parent != parent or actual_is_group != is_group:
+        if existing.name != name or actual_parent != parent or actual_is_group != is_group:
             raise RuntimeError(
                 f"Managed {doctype} {name!r} drifted: "
-                f"parent={actual_parent!r}, is_group={actual_is_group}; "
-                f"expected parent={parent!r}, is_group={is_group}"
+                f"name={existing.name!r}, parent={actual_parent!r}, is_group={actual_is_group}; "
+                f"expected name={name!r}, parent={parent!r}, is_group={is_group}"
             )
         return
 
@@ -194,7 +231,8 @@ def _ensure_warehouse(warehouse_name, parent_warehouse, is_group, warehouse_type
     if frappe.db.exists("Warehouse", expected_name):
         warehouse = frappe.get_doc("Warehouse", expected_name)
         mismatch = (
-            warehouse.parent_warehouse != parent_warehouse
+            warehouse.name != expected_name
+            or warehouse.parent_warehouse != parent_warehouse
             or warehouse.company != COMPANY_NAME
             or int(warehouse.is_group or 0) != is_group
             or (warehouse_type is not None and warehouse.warehouse_type != warehouse_type)
