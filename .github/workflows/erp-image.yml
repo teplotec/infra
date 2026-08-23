@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "apps/teplotec_erp/**"
+      - "config/erp-setup.json"
       - "docker/erpnext/**"
       - ".github/workflows/erp-image.yml"
   push:
@@ -191,6 +192,41 @@ jobs:
           docker exec teplotec-erp-smoke-backend \
             bench --site ci.localhost install-app teplotec_erp
 
+      - name: Apply TeploTEC setup profile
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          setup_args="$(python3 - <<'PY'
+          import calendar
+          import json
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          with open("config/erp-setup.json", encoding="utf-8") as handle:
+              config = json.load(handle)
+
+          start_month = int(config.pop("financial_year_start_month", 1))
+          timezone = config.get("timezone", "UTC")
+          now = datetime.now(ZoneInfo(timezone))
+          start_year = now.year if now.month >= start_month else now.year - 1
+          end_year = start_year + 1 if start_month != 1 else start_year
+          end_month = 12 if start_month == 1 else start_month - 1
+          end_day = calendar.monthrange(end_year, end_month)[1]
+
+          config["fy_start_date"] = f"{start_year:04d}-{start_month:02d}-01"
+          config["fy_end_date"] = f"{end_year:04d}-{end_month:02d}-{end_day:02d}"
+
+          print(json.dumps(config, separators=(",", ":"), ensure_ascii=False))
+          PY
+          )"
+
+          docker exec teplotec-erp-smoke-backend \
+            bench --site ci.localhost execute \
+            frappe.desk.page.setup_wizard.setup_wizard.setup_complete \
+            --args "[$setup_args]"
+
       - name: Migrate smoke test site
         if: github.event_name == 'pull_request'
         shell: bash
@@ -200,7 +236,7 @@ jobs:
           docker exec teplotec-erp-smoke-backend \
             bench --site ci.localhost migrate
 
-      - name: Verify TeploTEC localization
+      - name: Verify TeploTEC Ukrainian-first bootstrap
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
@@ -210,7 +246,7 @@ jobs:
             bench --site ci.localhost list-apps | grep -q teplotec_erp
 
           docker exec teplotec-erp-smoke-backend \
-            bench --site ci.localhost execute teplotec_erp.diagnostics.verify_localization
+            bench --site ci.localhost execute teplotec_erp.diagnostics.verify_ukrainian_first_setup
 
       - name: Cleanup smoke test
         if: always() && github.event_name == 'pull_request'
