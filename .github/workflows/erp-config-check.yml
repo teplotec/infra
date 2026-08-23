@@ -9,6 +9,7 @@ on:
       - "ansible/**"
       - "apps/teplotec_erp/**"
       - ".github/workflows/erp-reset.yml"
+      - ".github/workflows/erp-pilot.yml"
       - ".github/workflows/erp-config-check.yml"
 
 permissions:
