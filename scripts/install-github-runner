@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+RUNNER_VERSION="2.336.0"
+RUNNER_SHA256="04cf0be1aff4c3ec3554466c39124ca250e3effd8873bb7e8d68535aa9505d5d"
+RUNNER_USER="github-runner"
+RUNNER_HOME="/home/$RUNNER_USER"
+RUNNER_DIR="$RUNNER_HOME/actions-runner"
+RUNNER_NAME="teplotec-erp"
+RUNNER_LABELS="teplotec-erp-admin"
+REPOSITORY_URL="https://github.com/teplotec/infra"
+
+if [[ $EUID -ne 0 ]]; then
+  echo "Run this installer as root" >&2
+  exit 1
+fi
+
+registration_token="${1:-}"
+if [[ -z "$registration_token" ]]; then
+  IFS= read -r registration_token
+fi
+
+if [[ -z "$registration_token" ]]; then
+  echo "A GitHub Actions runner registration token is required" >&2
+  exit 64
+fi
+
+if ! id "$RUNNER_USER" >/dev/null 2>&1; then
+  useradd --create-home --shell /bin/bash "$RUNNER_USER"
+fi
+
+if [[ -f "$RUNNER_DIR/.runner" ]]; then
+  echo "Runner is already configured at $RUNNER_DIR"
+  if [[ -x "$RUNNER_DIR/svc.sh" ]]; then
+    cd "$RUNNER_DIR"
+    ./svc.sh start >/dev/null 2>&1 || true
+    ./svc.sh status
+  fi
+  exit 0
+fi
+
+apt-get update
+apt-get install -y ca-certificates curl tar
+
+install -d -o "$RUNNER_USER" -g "$RUNNER_USER" -m 0750 "$RUNNER_DIR"
+archive="$(mktemp /tmp/actions-runner.XXXXXX.tar.gz)"
+trap 'rm -f "$archive"' EXIT
+
+curl -fL --retry 3 \
+  "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz" \
+  -o "$archive"
+
+echo "$RUNNER_SHA256  $archive" | sha256sum -c -
+
+tar -xzf "$archive" -C "$RUNNER_DIR"
+chown -R "$RUNNER_USER:$RUNNER_USER" "$RUNNER_DIR"
+
+cd "$RUNNER_DIR"
+./bin/installdependencies.sh
+
+runuser -u "$RUNNER_USER" -- ./config.sh \
+  --unattended \
+  --url "$REPOSITORY_URL" \
+  --token "$registration_token" \
+  --name "$RUNNER_NAME" \
+  --labels "$RUNNER_LABELS" \
+  --work _work \
+  --replace
+
+unset registration_token
+
+./svc.sh install "$RUNNER_USER"
+./svc.sh start
+./svc.sh status
+
+echo "GitHub Actions runner $RUNNER_NAME installed with label $RUNNER_LABELS"
