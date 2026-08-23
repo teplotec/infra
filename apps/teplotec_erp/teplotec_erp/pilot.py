@@ -127,6 +127,7 @@ def _get_or_create_lead():
     return frappe.get_doc(
         {
             "doctype": "Lead",
+            "lead_name": "Іван Петренко",
             "first_name": "Іван",
             "last_name": "Петренко",
             "email_id": PILOT_EMAIL,
