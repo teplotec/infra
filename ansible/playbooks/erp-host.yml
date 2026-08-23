@@ -1,0 +1,100 @@
+---
+- name: Configure TeploTEC ERP host
+  hosts: erp
+  become: true
+  gather_facts: true
+
+  vars:
+    runner_user: github-runner
+    runner_home: /home/github-runner
+    runner_dir: /home/github-runner/actions-runner
+    runner_service: actions.runner.teplotec-infra.teplotec-erp.service
+    runner_registration_token: >-
+      {{ lookup('ansible.builtin.env', 'GITHUB_RUNNER_REGISTRATION_TOKEN') | default('', true) }}
+
+  tasks:
+    - name: Install host administration dependencies
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - sudo
+          - tar
+        state: present
+        update_cache: true
+
+    - name: Ensure GitHub runner user exists
+      ansible.builtin.user:
+        name: "{{ runner_user }}"
+        home: "{{ runner_home }}"
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: Install restricted ERP admin helper
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../scripts/erp-admin"
+        dest: /usr/local/sbin/teplotec-erp-admin
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Install restricted sudo policy for ERP admin helper
+      ansible.builtin.copy:
+        content: "{{ runner_user }} ALL=(root) NOPASSWD: /usr/local/sbin/teplotec-erp-admin *\n"
+        dest: /etc/sudoers.d/teplotec-erp-admin
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+
+    - name: Install GitHub runner bootstrap helper
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../scripts/install-github-runner"
+        dest: /usr/local/sbin/install-teplotec-github-runner
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Check whether the GitHub runner is registered
+      ansible.builtin.stat:
+        path: "{{ runner_dir }}/.runner"
+      register: runner_registration
+
+    - name: Require a short-lived registration token for a fresh host
+      ansible.builtin.assert:
+        that:
+          - runner_registration_token | length > 0
+        fail_msg: >-
+          GITHUB_RUNNER_REGISTRATION_TOKEN is required only when the runner has not yet been registered.
+          Generate one with the GitHub CLI and re-run the playbook.
+      when: not runner_registration.stat.exists
+
+    - name: Register and install the GitHub runner on a fresh host
+      ansible.builtin.command:
+        cmd: /usr/local/sbin/install-teplotec-github-runner
+        stdin: "{{ runner_registration_token }}"
+      no_log: true
+      when: not runner_registration.stat.exists
+      changed_when: true
+
+    - name: Check whether the runner systemd service exists
+      ansible.builtin.stat:
+        path: "/etc/systemd/system/{{ runner_service }}"
+      register: runner_service_file
+
+    - name: Install runner systemd service when registration exists without a service
+      ansible.builtin.command:
+        cmd: "{{ runner_dir }}/svc.sh install {{ runner_user }}"
+        chdir: "{{ runner_dir }}"
+      when:
+        - runner_registration.stat.exists
+        - not runner_service_file.stat.exists
+      changed_when: true
+
+    - name: Ensure GitHub runner service is enabled and running
+      ansible.builtin.systemd_service:
+        name: "{{ runner_service }}"
+        enabled: true
+        state: started
+        daemon_reload: true
