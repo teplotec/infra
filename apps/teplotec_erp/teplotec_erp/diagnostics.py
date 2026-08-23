@@ -1,5 +1,6 @@
 import frappe
 
+from teplotec_erp.crm_integration import verify_frappe_crm_integration
 from teplotec_erp.crm_sales import (
     EXPECTED_SELLING_SETTINGS,
     OPPORTUNITY_LOST_REASONS,
@@ -41,7 +42,7 @@ EXPECTED_SYSTEM_SETTINGS = {
 
 
 def verify_localization():
-    """Fail loudly when the TeploTEC Ukrainian language bootstrap is incomplete."""
+    """Fail loudly when the TEPLOTEC Ukrainian language bootstrap is incomplete."""
     if not frappe.db.exists("Language", "uk"):
         raise AssertionError("Ukrainian language record 'uk' is missing")
 
@@ -64,7 +65,7 @@ def verify_localization():
 
 
 def verify_master_data_v1():
-    """Verify the managed TeploTEC master-data baseline and stock defaults."""
+    """Verify the managed TEPLOTEC master-data baseline and stock defaults."""
     _verify_tree_nodes("Item Group", "parent_item_group", ITEM_GROUPS)
     _verify_tree_nodes("Customer Group", "parent_customer_group", CUSTOMER_GROUPS)
     _verify_tree_nodes("Supplier Group", "parent_supplier_group", SUPPLIER_GROUPS)
@@ -90,7 +91,7 @@ def verify_master_data_v1():
         if settings.get(field) != expected
     }
     if stock_mismatch:
-        raise AssertionError(f"TeploTEC stock defaults mismatch: {stock_mismatch}")
+        raise AssertionError(f"TEPLOTEC stock defaults mismatch: {stock_mismatch}")
 
     return {
         "status": "ok",
@@ -105,7 +106,7 @@ def verify_master_data_v1():
 
 
 def verify_crm_sales_v1():
-    """Verify TeploTEC CRM/Sales classification records and selling defaults."""
+    """Verify downstream ERPNext sales classifications and defaults used by TEPLOTEC."""
     _verify_named_records("Sales Stage", SALES_STAGES)
     _verify_named_records("Opportunity Lost Reason", OPPORTUNITY_LOST_REASONS)
 
@@ -136,7 +137,7 @@ def verify_crm_sales_v1():
         if settings.get(field) != expected
     }
     if setting_mismatches:
-        raise AssertionError(f"TeploTEC selling defaults mismatch: {setting_mismatches}")
+        raise AssertionError(f"TEPLOTEC selling defaults mismatch: {setting_mismatches}")
 
     return {
         "status": "ok",
@@ -193,7 +194,7 @@ def _verify_warehouse(name, parent, is_group, warehouse_type=None):
 
 
 def verify_ukrainian_first_setup():
-    """Verify the version-controlled TeploTEC setup profile was applied successfully."""
+    """Verify the version-controlled TEPLOTEC setup profile was applied successfully."""
     verify_localization()
 
     settings = frappe.get_single("System Settings")
@@ -205,7 +206,7 @@ def verify_ukrainian_first_setup():
             mismatches[field] = {"expected": expected, "actual": actual}
 
     if mismatches:
-        raise AssertionError(f"TeploTEC system settings mismatch: {mismatches}")
+        raise AssertionError(f"TEPLOTEC system settings mismatch: {mismatches}")
 
     company = frappe.db.get_value(
         "Company",
@@ -214,10 +215,11 @@ def verify_ukrainian_first_setup():
         as_dict=True,
     )
     if not company or company.name != COMPANY_NAME or company.abbr != COMPANY_ABBR:
-        raise AssertionError(f"TeploTEC company bootstrap mismatch: {company}")
+        raise AssertionError(f"TEPLOTEC company bootstrap mismatch: {company}")
 
     master_data = verify_master_data_v1()
     crm_sales = verify_crm_sales_v1()
+    frappe_crm = verify_frappe_crm_integration()
 
     return {
         "status": "ok",
@@ -228,4 +230,5 @@ def verify_ukrainian_first_setup():
         "company": company.name,
         "master_data": master_data,
         "crm_sales": crm_sales,
+        "frappe_crm": frappe_crm,
     }
