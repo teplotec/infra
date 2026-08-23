@@ -55,7 +55,7 @@ jobs:
               if config.get(key) != value
           }
           if mismatches:
-              raise SystemExit(f"Invalid TeploTEC ERP setup profile: {mismatches}")
+              raise SystemExit(f"Invalid TEPLOTEC ERP setup profile: {mismatches}")
           PY
 
       - name: Validate Ansible host configuration
@@ -63,5 +63,5 @@ jobs:
           python3 -m pip install --disable-pip-version-check ansible-core
           ansible-playbook --syntax-check ansible/playbooks/erp-host.yml
 
-      - name: Compile TeploTEC ERP Python
+      - name: Compile TEPLOTEC ERP Python
         run: python3 -m compileall -q apps/teplotec_erp/teplotec_erp
