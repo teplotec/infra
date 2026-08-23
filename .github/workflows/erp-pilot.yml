@@ -1,0 +1,28 @@
+name: ERP Pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type CREATE PILOT to create or resume disposable pilot data"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erp-production-admin
+  cancel-in-progress: false
+
+jobs:
+  pilot:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.confirmation == 'CREATE PILOT'
+    runs-on: [self-hosted, linux, x64, teplotec-erp-admin]
+    environment: production
+
+    steps:
+      - name: Create and verify disposable TeploTEC sales pilot
+        run: sudo /usr/local/sbin/teplotec-erp-admin pilot
