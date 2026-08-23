@@ -11,7 +11,7 @@ During the initial implementation phase, `erp.teplotec.com` is intentionally tre
 - timezone: Europe/Kyiv
 - currency: UAH
 - company: TEPLOTEC
-- abbreviation: TTEC
+- abbreviation: TEC
 - chart of accounts: Standard with Numbers
 - financial year: January 1 through December 31, calculated from the current year
 - demo data: disabled
