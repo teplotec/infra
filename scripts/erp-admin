@@ -165,6 +165,17 @@ case "${1:-}" in
     echo "TEPLOTEC ERPNext downstream pilot created and verified."
     ;;
 
+  demo-seed)
+    ensure_required_apps_installed
+    echo "Creating or refreshing version-controlled TEPLOTEC CRM demo data..."
+    compose exec -T backend \
+      bench --site "$ERP_HOSTNAME" execute teplotec_erp.demo_data.seed_crm_demo_v1
+    echo "Verifying TEPLOTEC CRM demo data..."
+    compose exec -T backend \
+      bench --site "$ERP_HOSTNAME" execute teplotec_erp.demo_data.verify_crm_demo_v1
+    echo "TEPLOTEC CRM demo data created and verified."
+    ;;
+
   deploy-image)
     image_ref="${2:-}"
     if [[ ! "$image_ref" =~ ^ghcr\.io/teplotec/erpnext:sha-[0-9a-f]{40}$ ]]; then
@@ -246,7 +257,7 @@ case "${1:-}" in
     ;;
 
   *)
-    echo "Usage: $0 {status|restart|migrate|set-admin-password|pilot|deploy-image|reset}" >&2
+    echo "Usage: $0 {status|restart|migrate|set-admin-password|pilot|demo-seed|deploy-image|reset}" >&2
     exit 64
     ;;
 esac
