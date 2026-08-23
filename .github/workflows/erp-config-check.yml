@@ -5,6 +5,7 @@ on:
     paths:
       - "config/erp-setup.json"
       - "scripts/erp-admin"
+      - "scripts/install-github-runner"
       - "apps/teplotec_erp/**"
       - ".github/workflows/erp-reset.yml"
       - ".github/workflows/erp-config-check.yml"
@@ -19,8 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate reset script
-        run: bash -n scripts/erp-admin
+      - name: Validate admin scripts
+        run: |
+          bash -n scripts/erp-admin
+          bash -n scripts/install-github-runner
 
       - name: Validate setup profile
         shell: bash
