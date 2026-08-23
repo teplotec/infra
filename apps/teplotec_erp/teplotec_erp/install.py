@@ -8,6 +8,10 @@ def after_install():
 def after_migrate():
     ensure_ukrainian_language()
 
+    from teplotec_erp.master_data import apply_master_data_v1_if_ready
+
+    apply_master_data_v1_if_ready()
+
 
 def ensure_ukrainian_language():
     values = {
