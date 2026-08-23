@@ -304,6 +304,21 @@ jobs:
           docker exec teplotec-erp-smoke-backend \
             bench --site ci.localhost execute teplotec_erp.pilot.verify_pilot_scenario
 
+      - name: Exercise version-controlled CRM demo dataset
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker exec teplotec-erp-smoke-backend \
+            bench --site ci.localhost execute teplotec_erp.demo_data.seed_crm_demo_v1
+
+          docker exec teplotec-erp-smoke-backend \
+            bench --site ci.localhost execute teplotec_erp.demo_data.seed_crm_demo_v1
+
+          docker exec teplotec-erp-smoke-backend \
+            bench --site ci.localhost execute teplotec_erp.demo_data.verify_crm_demo_v1
+
       - name: Cleanup smoke test
         if: always() && github.event_name == 'pull_request'
         shell: bash
