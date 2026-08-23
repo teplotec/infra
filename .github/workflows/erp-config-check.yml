@@ -23,7 +23,35 @@ jobs:
         run: bash -n scripts/erp-admin
 
       - name: Validate setup profile
-        run: python3 -m json.tool config/erp-setup.json >/dev/null
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m json.tool config/erp-setup.json >/dev/null
+          python3 - <<'PY'
+          import json
+
+          with open("config/erp-setup.json", encoding="utf-8") as handle:
+              config = json.load(handle)
+
+          expected = {
+              "language": "Українська",
+              "country": "Ukraine",
+              "timezone": "Europe/Kyiv",
+              "currency": "UAH",
+              "company_name": "TEPLOTEC",
+              "company_abbr": "TTEC",
+              "setup_demo": 0,
+              "enable_telemetry": 0,
+          }
+
+          mismatches = {
+              key: {"expected": value, "actual": config.get(key)}
+              for key, value in expected.items()
+              if config.get(key) != value
+          }
+          if mismatches:
+              raise SystemExit(f"Invalid TeploTEC ERP setup profile: {mismatches}")
+          PY
 
       - name: Compile TeploTEC ERP Python
         run: python3 -m compileall -q apps/teplotec_erp/teplotec_erp
