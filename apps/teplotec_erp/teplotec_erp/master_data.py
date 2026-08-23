@@ -47,9 +47,8 @@ REQUIRED_UOMS = {
     "Hour": 0,
 }
 
-WAREHOUSE_ROOT = f"All Warehouses - {COMPANY_ABBR}"
-MAIN_WAREHOUSE = f"Stores - {COMPANY_ABBR}"
-TRANSIT_WAREHOUSE = f"Goods In Transit - {COMPANY_ABBR}"
+MAIN_WAREHOUSE = f"Main Warehouse - {COMPANY_ABBR}"
+TRANSIT_WAREHOUSE = f"In Transit - {COMPANY_ABBR}"
 PROJECT_SITES_WAREHOUSE = f"Project Sites - {COMPANY_ABBR}"
 
 
@@ -77,8 +76,24 @@ def apply_master_data_v1():
         "customer_groups": len(CUSTOMER_GROUPS),
         "supplier_groups": len(SUPPLIER_GROUPS),
         "uoms": len(REQUIRED_UOMS),
+        "default_warehouse": MAIN_WAREHOUSE,
+        "transit_warehouse": TRANSIT_WAREHOUSE,
         "project_sites_warehouse": PROJECT_SITES_WAREHOUSE,
     }
+
+
+def get_warehouse_root():
+    warehouses = frappe.get_all(
+        "Warehouse",
+        filters={"company": COMPANY_NAME, "is_group": 1},
+        fields=["name", "parent_warehouse"],
+        order_by="creation asc",
+    )
+    for warehouse in warehouses:
+        if not warehouse.parent_warehouse:
+            return warehouse.name
+
+    raise RuntimeError(f"Root Warehouse for {COMPANY_NAME!r} is missing")
 
 
 def _require_company():
@@ -167,27 +182,35 @@ def _ensure_tree_node(doctype, name, name_field, parent_field, parent, is_group)
 
 
 def _ensure_warehouses():
-    for required in (WAREHOUSE_ROOT, MAIN_WAREHOUSE, TRANSIT_WAREHOUSE):
-        if not frappe.db.exists("Warehouse", required):
-            raise RuntimeError(f"ERPNext default warehouse {required!r} is missing")
+    warehouse_root = get_warehouse_root()
+    _ensure_warehouse("Main Warehouse", warehouse_root, is_group=0)
+    _ensure_warehouse("In Transit", warehouse_root, is_group=0, warehouse_type="Transit")
+    _ensure_warehouse("Project Sites", warehouse_root, is_group=1)
 
-    if frappe.db.exists("Warehouse", PROJECT_SITES_WAREHOUSE):
-        warehouse = frappe.get_doc("Warehouse", PROJECT_SITES_WAREHOUSE)
-        if (
-            warehouse.parent_warehouse != WAREHOUSE_ROOT
+
+def _ensure_warehouse(warehouse_name, parent_warehouse, is_group, warehouse_type=None):
+    expected_name = f"{warehouse_name} - {COMPANY_ABBR}"
+
+    if frappe.db.exists("Warehouse", expected_name):
+        warehouse = frappe.get_doc("Warehouse", expected_name)
+        mismatch = (
+            warehouse.parent_warehouse != parent_warehouse
             or warehouse.company != COMPANY_NAME
-            or int(warehouse.is_group or 0) != 1
-        ):
-            raise RuntimeError(f"Managed Warehouse {PROJECT_SITES_WAREHOUSE!r} drifted")
+            or int(warehouse.is_group or 0) != is_group
+            or (warehouse_type is not None and warehouse.warehouse_type != warehouse_type)
+        )
+        if mismatch:
+            raise RuntimeError(f"Managed Warehouse {expected_name!r} drifted")
         return
 
     frappe.get_doc(
         {
             "doctype": "Warehouse",
-            "warehouse_name": "Project Sites",
+            "warehouse_name": warehouse_name,
             "company": COMPANY_NAME,
-            "parent_warehouse": WAREHOUSE_ROOT,
-            "is_group": 1,
+            "parent_warehouse": parent_warehouse,
+            "is_group": is_group,
+            "warehouse_type": warehouse_type,
         }
     ).insert(ignore_permissions=True)
 
