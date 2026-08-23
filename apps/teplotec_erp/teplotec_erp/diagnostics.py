@@ -1,5 +1,12 @@
 import frappe
 
+from teplotec_erp.crm_sales import (
+    EXPECTED_SELLING_SETTINGS,
+    OPPORTUNITY_LOST_REASONS,
+    OPPORTUNITY_TYPES,
+    PROJECT_TYPES,
+    SALES_STAGES,
+)
 from teplotec_erp.master_data import (
     COMPANY_ABBR,
     COMPANY_NAME,
@@ -97,6 +104,56 @@ def verify_master_data_v1():
     }
 
 
+def verify_crm_sales_v1():
+    """Verify TeploTEC CRM/Sales classification records and selling defaults."""
+    _verify_named_records("Sales Stage", SALES_STAGES)
+    _verify_named_records("Opportunity Lost Reason", OPPORTUNITY_LOST_REASONS)
+
+    for name, description in OPPORTUNITY_TYPES.items():
+        if not frappe.db.exists("Opportunity Type", name):
+            raise AssertionError(f"Managed Opportunity Type is missing: {name}")
+        actual = frappe.db.get_value("Opportunity Type", name, "description") or ""
+        if actual != description:
+            raise AssertionError(
+                f"Managed Opportunity Type {name!r} description mismatch: "
+                f"actual={actual!r}, expected={description!r}"
+            )
+
+    for name, description in PROJECT_TYPES.items():
+        if not frappe.db.exists("Project Type", name):
+            raise AssertionError(f"Managed Project Type is missing: {name}")
+        actual = frappe.db.get_value("Project Type", name, "description") or ""
+        if actual != description:
+            raise AssertionError(
+                f"Managed Project Type {name!r} description mismatch: "
+                f"actual={actual!r}, expected={description!r}"
+            )
+
+    settings = frappe.get_single("Selling Settings")
+    setting_mismatches = {
+        field: {"actual": settings.get(field), "expected": expected}
+        for field, expected in EXPECTED_SELLING_SETTINGS.items()
+        if settings.get(field) != expected
+    }
+    if setting_mismatches:
+        raise AssertionError(f"TeploTEC selling defaults mismatch: {setting_mismatches}")
+
+    return {
+        "status": "ok",
+        "sales_stages": len(SALES_STAGES),
+        "opportunity_types": len(OPPORTUNITY_TYPES),
+        "lost_reasons": len(OPPORTUNITY_LOST_REASONS),
+        "project_types": len(PROJECT_TYPES),
+        "territory": settings.territory,
+    }
+
+
+def _verify_named_records(doctype, names):
+    missing = [name for name in names if not frappe.db.exists(doctype, name)]
+    if missing:
+        raise AssertionError(f"Managed {doctype} records are missing: {missing}")
+
+
 def _verify_tree_nodes(doctype, parent_field, expected_nodes):
     for name, parent, is_group in expected_nodes:
         if not frappe.db.exists(doctype, name):
@@ -160,6 +217,7 @@ def verify_ukrainian_first_setup():
         raise AssertionError(f"TeploTEC company bootstrap mismatch: {company}")
 
     master_data = verify_master_data_v1()
+    crm_sales = verify_crm_sales_v1()
 
     return {
         "status": "ok",
@@ -169,4 +227,5 @@ def verify_ukrainian_first_setup():
         "currency": settings.currency,
         "company": company.name,
         "master_data": master_data,
+        "crm_sales": crm_sales,
     }
