@@ -139,6 +139,17 @@ case "${1:-}" in
     unset admin_password
     ;;
 
+  pilot)
+    ensure_teplotec_app_installed
+    echo "Creating or resuming the disposable TeploTEC sales pilot..."
+    compose exec -T backend \
+      bench --site "$ERP_HOSTNAME" execute teplotec_erp.pilot.create_pilot_scenario
+    echo "Verifying the TeploTEC sales pilot..."
+    compose exec -T backend \
+      bench --site "$ERP_HOSTNAME" execute teplotec_erp.pilot.verify_pilot_scenario
+    echo "TeploTEC sales pilot created and verified."
+    ;;
+
   deploy-image)
     image_ref="${2:-}"
     if [[ ! "$image_ref" =~ ^ghcr\.io/teplotec/erpnext:sha-[0-9a-f]{40}$ ]]; then
@@ -224,7 +235,7 @@ case "${1:-}" in
     ;;
 
   *)
-    echo "Usage: $0 {status|restart|migrate|set-admin-password|deploy-image|reset}" >&2
+    echo "Usage: $0 {status|restart|migrate|set-admin-password|pilot|deploy-image|reset}" >&2
     exit 64
     ;;
 esac
