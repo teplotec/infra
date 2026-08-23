@@ -8,9 +8,11 @@ def after_install():
 def after_migrate():
     ensure_ukrainian_language()
 
+    from teplotec_erp.crm_sales import apply_crm_sales_v1_if_ready
     from teplotec_erp.master_data import apply_master_data_v1_if_ready
 
     apply_master_data_v1_if_ready()
+    apply_crm_sales_v1_if_ready()
 
 
 def ensure_ukrainian_language():
