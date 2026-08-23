@@ -152,7 +152,7 @@ def _get_or_create_opportunity(lead, item):
     if existing:
         return frappe.get_doc("Opportunity", existing)
 
-    from erpnext.crm.doctype.lead.mapper import make_opportunity
+    from erpnext.crm.doctype.lead.lead import make_opportunity
 
     opportunity = make_opportunity(lead.name)
     opportunity.company = COMPANY_NAME
@@ -186,7 +186,7 @@ def _get_or_create_quotation(opportunity):
             quotation.submit()
         return quotation
 
-    from erpnext.crm.doctype.opportunity.mapper import make_quotation
+    from erpnext.crm.doctype.opportunity.opportunity import make_quotation
 
     quotation = make_quotation(opportunity.name)
     quotation.opportunity = opportunity.name
@@ -202,7 +202,7 @@ def _get_or_create_customer(lead):
     if existing:
         return frappe.get_doc("Customer", existing)
 
-    from erpnext.crm.doctype.lead.mapper import _make_customer
+    from erpnext.crm.doctype.lead.lead import _make_customer
 
     customer = _make_customer(lead.name, ignore_permissions=True)
     customer.customer_group = "Residential Customers"
@@ -226,7 +226,7 @@ def _get_or_create_sales_order(quotation, customer):
             sales_order.submit()
         return sales_order
 
-    from erpnext.selling.doctype.quotation.mapper import _make_sales_order
+    from erpnext.selling.doctype.quotation.quotation import _make_sales_order
 
     sales_order = _make_sales_order(quotation.name, ignore_permissions=True)
     delivery_date = add_days(nowdate(), 45)
