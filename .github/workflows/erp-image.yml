@@ -10,10 +10,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "apps/teplotec_erp/**"
-      - "docker/erpnext/**"
-      - ".github/workflows/erp-image.yml"
   workflow_dispatch:
 
 permissions:
