@@ -3,7 +3,7 @@ from pathlib import Path
 
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
-from frappe.utils import add_days, nowdate
+from frappe.utils import add_days, getdate, nowdate
 
 
 CRM_APP = "crm"
@@ -212,7 +212,9 @@ def qualification_values(spec):
 
     target_days = spec.get("target_commissioning_days")
     if target_days is not None:
-        values["teplotec_target_commissioning_date"] = add_days(nowdate(), int(target_days))
+        values["teplotec_target_commissioning_date"] = getdate(
+            add_days(nowdate(), int(target_days))
+        )
 
     return values
 
