@@ -35,7 +35,18 @@ RUN --mount=type=secret,id=apps_json,target=/opt/frappe/apps.json,uid=1000,gid=1
     fi && \
     grep -qxF crm sites/apps.txt && \
     grep -qxF teplotec_erp sites/apps.txt && \
+    install -m 0644 \
+      apps/teplotec_erp/teplotec_erp/crm_locale/uk.po \
+      apps/crm/crm/locale/uk.po && \
+    bench update-po-files --app crm --locale uk && \
+    reviewed="$(grep -c '^msgstr \"[^\"]' apps/crm/crm/locale/uk.po)" && \
+    total="$(grep -c '^msgid \"' apps/crm/crm/locale/uk.po)" && \
+    total="$((total - 1))" && \
+    echo "Frappe CRM Ukrainian coverage: ${reviewed}/${total} reviewed strings" && \
+    test "$reviewed" -ge 50 && \
     CI=1 bench build --app crm && \
+    bench compile-po-to-mo --app crm --locale uk --force && \
+    test -s sites/assets/locale/uk/LC_MESSAGES/crm.mo && \
     test -s apps/crm/crm/www/crm.html && \
     test -d apps/crm/crm/public/frontend && \
     test -L sites/assets/crm && \
