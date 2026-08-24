@@ -1,56 +1,90 @@
-# TEPLOTEC ERPNext Downstream Pilot
+# TEPLOTEC CRM-Origin Sales Pilot
 
-This pilot is disposable transactional data used to exercise the standard ERPNext execution spine. It predates the decision to make Frappe CRM the TEPLOTEC sales source of truth and is now retained only as a downstream compatibility baseline.
+This pilot is disposable transactional data used to exercise the canonical TEPLOTEC sales-to-execution spine with Frappe CRM as the sales source of truth.
 
-It is deliberately **not** executed from `after_migrate`. Deploying application code must not silently create Leads, Customers, Quotations, Sales Orders, or Projects.
+It is deliberately **not** executed from `after_migrate`. Deploying application code must not silently create Leads, Deals, Customers, Quotations, Sales Orders, or Projects.
 
-## Baseline scenario
-
-```text
-ERPNext Lead: Іван Петренко
-  -> ERPNext Opportunity: Heat Pump Installation
-     -> Sales Stage: Site Survey
-  -> Quotation
-  -> Customer: Residential Customers
-  -> Sales Order
-  -> Project: Customer Installation
-```
-
-The pilot also creates one disposable service Item:
+## Canonical scenario
 
 ```text
-PILOT-SVC-HP-INSTALL
+Frappe CRM Lead: Оксана Бондар
+  -> Frappe CRM Deal: Qualification
+     -> CRM Product linked from ERPNext Item
+  -> ERPNext Quotation against CRM Deal
+  -> ERPNext Sales Order
+     -> Customer created/attached by the upstream Frappe CRM integration
+  -> ERPNext Project: Customer Installation
 ```
 
-with a test rate of `250000 UAH`.
+The pilot creates one disposable ERPNext service Item:
 
-## Why it remains
+```text
+PILOT-SVC-GEO-HP-INSTALL
+```
 
-Frappe CRM now owns TEPLOTEC Leads, Deals, Organizations, Contacts, and pipeline state. The normal sales flow must therefore originate in `CRM Lead` / `CRM Deal`, not ERPNext Lead / Opportunity.
+with a test rate of `310000 UAH`.
 
-This older pilot remains useful temporarily because it proves that the ERPNext downstream objects and mappings still work. It will be replaced by a CRM-origin pilot that hands a `CRM Deal` into ERPNext Customer, Quotation, Sales Order, and Project.
+Because same-site Frappe CRM integration is enabled, the ERPNext Item must automatically produce a linked `CRM Product`. The reverse CRM Product -> ERPNext Item direction remains disabled, so ERPNext stays the operational product master.
+
+## Source-of-truth boundary
+
+The pilot must not create an ERPNext `Lead` or `Opportunity`.
+
+Frappe CRM owns:
+
+- CRM Lead
+- CRM Deal
+- pipeline status
+- sales ownership and activity
+
+ERPNext owns downstream execution:
+
+- Item
+- Quotation
+- Customer
+- Sales Order
+- Project
+- later Stock, Buying, Accounting, Assets, and Service
+
+The integration boundary is carried by the upstream Frappe CRM / ERPNext fields such as `Quotation.crm_deal`, `Customer.crm_deal`, `CRM Product.erpnext_item_code`, and `Item.crm_product_code`.
+
+## Why this matters
+
+The previous pilot originated in ERPNext Lead / Opportunity and only proved the downstream ERPNext spine. It has now been replaced because that model contradicted the decision to make Frappe CRM authoritative for TEPLOTEC sales.
+
+The canonical pilot intentionally uses the supported upstream same-site integration instead of implementing a parallel TEPLOTEC CRM-to-ERP bridge. TEPLOTEC code only adds its downstream business classification, currently `Residential Customers` and `Customer Installation`.
 
 ## CI
 
-Pull-request image CI runs this baseline twice on the fresh Ukrainian-first site and then verifies it. Running it twice proves the helper is resumable/idempotent for the same dedicated pilot customer.
+Pull-request image CI runs the pilot twice on a fresh Ukrainian-first site and then verifies it. Running it twice proves the dedicated fixture is resumable/idempotent.
 
-Frappe CRM installation and same-site ERPNext integration are verified separately by the TEPLOTEC bootstrap diagnostics.
+Verification includes:
+
+- ERPNext Item -> CRM Product link in both directions
+- CRM Lead -> CRM Deal
+- CRM Deal product backed by the ERPNext Item
+- Quotation directly against `CRM Deal`
+- Customer linked back to the CRM Deal
+- submitted Sales Order linked to the Quotation
+- Customer Installation Project linked to the Sales Order
+- absence of a duplicate ERPNext Lead for the CRM-origin scenario
 
 ## Production-like site
 
-The manual `ERP Pilot` workflow can create and verify this baseline explicitly on CX33. It must not become part of normal migrations or disaster-recovery restore behavior.
+The manual `ERP Pilot` workflow can create and verify this disposable scenario explicitly on CX33. It must not become part of normal migrations, deploys, reset, or disaster-recovery restore behavior.
 
-## Next pilot
+## What we discover next
 
-The canonical TEPLOTEC sales pilot is the next slice:
+This pilot is the boundary test for deciding which TEPLOTEC-specific concepts deserve first-class modeling. Candidate concepts include:
 
-```text
-CRM Lead
-  -> CRM Deal
-     -> ERPNext Customer
-     -> ERPNext Quotation
-     -> ERPNext Sales Order
-     -> ERPNext Project
-```
+- physical customer object / site
+- building parameters
+- heat-loss calculation inputs
+- site survey
+- drilling scope and boreholes
+- engineering artifacts
+- installation stages
+- commissioning
+- service lifecycle
 
-That pilot will be used to discover TEPLOTEC-specific concepts such as the physical customer object/site, building parameters, heat-loss inputs, site survey, drilling scope, engineering artifacts, installation, commissioning, and service lifecycle.
+We should add those concepts only when the real sales-to-execution flow proves that standard CRM/ERPNext fields are insufficient.
