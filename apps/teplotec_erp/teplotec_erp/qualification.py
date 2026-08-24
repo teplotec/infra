@@ -12,46 +12,46 @@ DEMO_QUALIFICATION_DATASET = "TEPLOTEC Sales Qualification Demo v1"
 DEMO_DATA_FILE = Path(__file__).with_name("data") / "sales_qualification_demo_v1.json"
 
 OBJECT_TYPES = (
-    "Private House",
-    "Residential Development",
-    "Multi-unit Residential",
-    "Commercial",
-    "Industrial",
-    "Public Sector",
-    "Agricultural",
-    "Other",
+    "Приватний будинок",
+    "Котеджне містечко",
+    "Багатоквартирний будинок",
+    "Комерційний об'єкт",
+    "Промисловий об'єкт",
+    "Громадський об'єкт",
+    "Аграрний об'єкт",
+    "Інший",
 )
 
 EXISTING_HEAT_SOURCES = (
-    "Gas",
-    "Electric",
-    "Solid Fuel",
-    "District Heating",
-    "Heat Pump",
-    "Mixed",
-    "None",
-    "Unknown",
+    "Газ",
+    "Електрика",
+    "Тверде паливо",
+    "Централізоване теплопостачання",
+    "Тепловий насос",
+    "Змішане",
+    "Відсутнє",
+    "Невідомо",
 )
 
 REQUESTED_SYSTEMS = (
-    "Geothermal",
-    "Air-to-Water",
-    "Hybrid",
-    "Undecided",
+    "Геотермальна",
+    "Повітря-вода",
+    "Гібридна",
+    "Не визначено",
 )
 
 DRILLING_FEASIBILITY = (
-    "Unknown",
-    "Possible",
-    "Constrained",
-    "Impossible",
+    "Невідомо",
+    "Можливе",
+    "Обмежене",
+    "Неможливе",
 )
 
 SITE_SURVEY_STATUSES = (
-    "Not Required",
-    "Required",
-    "Scheduled",
-    "Completed",
+    "Не потрібне",
+    "Потрібне",
+    "Заплановане",
+    "Завершене",
 )
 
 QUALIFICATION_FIELDS = (
