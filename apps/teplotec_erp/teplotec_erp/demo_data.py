@@ -4,6 +4,13 @@ from pathlib import Path
 import frappe
 from frappe.utils import add_days, nowdate
 
+from teplotec_erp.qualification import (
+    apply_demo_qualification,
+    load_demo_qualification_v1,
+    qualification_values,
+    verify_sales_qualification_v1,
+)
+
 
 CRM_APP = "crm"
 DEMO_DATASET = "TEPLOTEC CRM Demo v1"
@@ -14,7 +21,10 @@ DATA_FILE = Path(__file__).with_name("data") / "crm_demo_v1.json"
 def seed_crm_demo_v1():
     """Create or update the curated CRM demo dataset without touching real records."""
     _require_crm()
+    verify_sales_qualification_v1()
     data = _load_dataset()
+    qualification_data = load_demo_qualification_v1()
+    qualification_by_email = {row["email"]: row for row in qualification_data["deals"]}
 
     created_leads = 0
     updated_leads = 0
@@ -30,7 +40,12 @@ def seed_crm_demo_v1():
 
         deal_spec = row.get("deal")
         if deal_spec:
-            _, deal_created = _upsert_deal(lead, deal_spec)
+            deal, deal_created = _upsert_deal(lead, deal_spec)
+            qualification_spec = qualification_by_email.get(row["email"])
+            if qualification_spec:
+                apply_demo_qualification(deal, qualification_spec)
+                deal.save(ignore_permissions=True)
+
             if deal_created:
                 created_deals += 1
             else:
@@ -45,19 +60,26 @@ def seed_crm_demo_v1():
             "updated_leads": updated_leads,
             "created_deals": created_deals,
             "updated_deals": updated_deals,
+            "qualification_deals": len(qualification_by_email),
         }
     )
     return result
 
 
 def verify_crm_demo_v1():
-    """Verify that all version-controlled demo Leads and Deals exist."""
+    """Verify all version-controlled demo Leads, Deals, and qualification overlays."""
     _require_crm()
+    verify_sales_qualification_v1()
     data = _load_dataset()
+    qualification_data = load_demo_qualification_v1()
+    qualification_by_email = {row["email"]: row for row in qualification_data["deals"]}
+    demo_deal_emails = {row["email"] for row in data["leads"] if row.get("deal")}
 
+    orphan_qualification = sorted(set(qualification_by_email) - demo_deal_emails)
     missing_leads = []
     missing_deals = []
     status_mismatches = []
+    qualification_mismatches = []
 
     for row in data["leads"]:
         lead_name = frappe.db.get_value("CRM Lead", {"email": row["email"]}, "name")
@@ -74,7 +96,8 @@ def verify_crm_demo_v1():
             missing_deals.append(row["id"])
             continue
 
-        actual_status = frappe.db.get_value("CRM Deal", deal_name, "status")
+        deal = frappe.get_doc("CRM Deal", deal_name)
+        actual_status = deal.status
         if actual_status != deal_spec["status"]:
             status_mismatches.append(
                 {
@@ -84,12 +107,34 @@ def verify_crm_demo_v1():
                 }
             )
 
-    if missing_leads or missing_deals or status_mismatches:
+        qualification_spec = qualification_by_email.get(row["email"])
+        if qualification_spec:
+            for fieldname, expected in qualification_values(qualification_spec).items():
+                actual = deal.get(fieldname)
+                if actual != expected:
+                    qualification_mismatches.append(
+                        {
+                            "id": row["id"],
+                            "field": fieldname,
+                            "actual": actual,
+                            "expected": expected,
+                        }
+                    )
+
+    if (
+        missing_leads
+        or missing_deals
+        or status_mismatches
+        or qualification_mismatches
+        or orphan_qualification
+    ):
         raise AssertionError(
             "CRM demo verification failed: "
             f"missing_leads={missing_leads}, "
             f"missing_deals={missing_deals}, "
-            f"status_mismatches={status_mismatches}"
+            f"status_mismatches={status_mismatches}, "
+            f"qualification_mismatches={qualification_mismatches}, "
+            f"orphan_qualification={orphan_qualification}"
         )
 
     return {
@@ -98,6 +143,7 @@ def verify_crm_demo_v1():
         "version": data["version"],
         "leads": len(data["leads"]),
         "deals": sum(1 for row in data["leads"] if row.get("deal")),
+        "qualification_deals": len(qualification_by_email),
     }
 
 
