@@ -1,0 +1,11 @@
+diff --git a/crm/fcrm/doctype/crm_deal/crm_deal.py b/crm/fcrm/doctype/crm_deal/crm_deal.py
+--- a/crm/fcrm/doctype/crm_deal/crm_deal.py
++++ b/crm/fcrm/doctype/crm_deal/crm_deal.py
+@@ -292,7 +292,7 @@ class CRMDeal(Document):
+ 	def default_kanban_settings():
+ 		return {
+ 			"column_field": "status",
+-			"title_field": "organization",
++			"title_field": "teplotec_display_title",
+ 			"kanban_fields": '["annual_revenue", "email", "mobile_no", "_assign", "modified"]',
+ 		}
