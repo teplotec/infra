@@ -1,0 +1,16 @@
+diff --git a/frontend/src/components/FieldLayout/Field.vue b/frontend/src/components/FieldLayout/Field.vue
+--- a/frontend/src/components/FieldLayout/Field.vue
++++ b/frontend/src/components/FieldLayout/Field.vue
+@@ -181,7 +181,11 @@
+     <FormattedInput
+       v-else-if="field.fieldtype === 'Float'"
+       type="text"
+-      :value="getFormattedFloat(field.fieldname, data)"
++      :value="
++        isNull(data[field.fieldname])
++          ? ''
++          : getFormattedFloat(field.fieldname, data)
++      "
+       :placeholder="getPlaceholder(field)"
+       :disabled="Boolean(field.read_only)"
+       :description="field.description"
