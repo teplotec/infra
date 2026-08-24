@@ -11,3 +11,9 @@ required_apps = ["erpnext", "crm"]
 
 after_install = "teplotec_erp.install.after_install"
 after_migrate = "teplotec_erp.install.after_migrate"
+
+doc_events = {
+    "CRM Deal": {
+        "before_validate": "teplotec_erp.deal_semantics.set_deal_display_title",
+    }
+}
