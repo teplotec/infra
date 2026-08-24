@@ -35,6 +35,10 @@ RUN --mount=type=secret,id=apps_json,target=/opt/frappe/apps.json,uid=1000,gid=1
     fi && \
     grep -qxF crm sites/apps.txt && \
     grep -qxF teplotec_erp sites/apps.txt && \
+    git -C apps/crm apply --check \
+      /home/frappe/frappe-bench/apps/teplotec_erp/teplotec_erp/crm_patches/blank-null-floats.patch && \
+    git -C apps/crm apply \
+      /home/frappe/frappe-bench/apps/teplotec_erp/teplotec_erp/crm_patches/blank-null-floats.patch && \
     install -m 0644 \
       apps/teplotec_erp/teplotec_erp/crm_locale/uk.po \
       apps/crm/crm/locale/uk.po && \
