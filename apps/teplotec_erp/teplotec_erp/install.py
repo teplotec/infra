@@ -11,9 +11,11 @@ def after_migrate():
     from teplotec_erp.crm_integration import apply_frappe_crm_integration_if_ready
     from teplotec_erp.crm_sales import apply_crm_sales_v1_if_ready
     from teplotec_erp.master_data import apply_master_data_v1_if_ready
+    from teplotec_erp.qualification import apply_sales_qualification_v1_if_ready
 
     apply_master_data_v1_if_ready()
     apply_crm_sales_v1_if_ready()
+    apply_sales_qualification_v1_if_ready()
     apply_frappe_crm_integration_if_ready()
 
 
