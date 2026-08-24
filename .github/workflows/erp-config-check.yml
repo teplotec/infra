@@ -8,6 +8,7 @@ on:
       - "scripts/install-github-runner"
       - "ansible/**"
       - "apps/teplotec_erp/**"
+      - "docker/erpnext/**"
       - ".github/workflows/erp-reset.yml"
       - ".github/workflows/erp-pilot.yml"
       - ".github/workflows/erp-config-check.yml"
@@ -65,3 +66,40 @@ jobs:
 
       - name: Compile TEPLOTEC ERP Python
         run: python3 -m compileall -q apps/teplotec_erp/teplotec_erp
+
+      - name: Validate Ukrainian Frappe CRM overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends gettext >/dev/null
+
+          po="apps/teplotec_erp/teplotec_erp/crm_locale/uk.po"
+          msgfmt --check --check-header -o /dev/null "$po"
+
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          po_path = Path("apps/teplotec_erp/teplotec_erp/crm_locale/uk.po")
+          workflow_path = Path(".github/workflows/erp-image.yml")
+          po = po_path.read_text(encoding="utf-8")
+          workflow = workflow_path.read_text(encoding="utf-8")
+
+          version_match = re.search(r"FRAPPE_CRM_VERSION:\s*(\S+)", workflow)
+          if not version_match:
+              raise SystemExit("FRAPPE_CRM_VERSION is missing from ERP Image workflow")
+
+          version = version_match.group(1)
+          marker = f"X-TEPLOTEC-Upstream-CRM-Version: {version}\\n"
+          if marker not in po:
+              raise SystemExit(
+                  f"CRM Ukrainian overlay is not aligned with pinned Frappe CRM {version}"
+              )
+
+          reviewed = len(re.findall(r'^msgstr ".+"$', po, flags=re.MULTILINE))
+          if reviewed < 50:
+              raise SystemExit(f"Expected at least 50 reviewed CRM translations, found {reviewed}")
+
+          print(f"Reviewed Ukrainian Frappe CRM strings: {reviewed}")
+          PY
