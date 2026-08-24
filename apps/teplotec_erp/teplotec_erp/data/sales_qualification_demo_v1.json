@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "dataset": "TEPLOTEC Sales Qualification Demo v1",
+  "description": "Exploratory qualification overlay for representative CRM demo deals. Values are intentionally disposable and may change as the TEPLOTEC sales domain is learned.",
+  "deals": [
+    {
+      "email": "demo.oksana.bondar@teplotec.invalid",
+      "object_type": "Private House",
+      "object_location": "Буча, Київська область",
+      "heated_area_m2": 185,
+      "existing_heat_source": "Gas",
+      "estimated_heat_loss_kw": 12.5,
+      "requested_system": "Geothermal",
+      "drilling_feasibility": "Unknown",
+      "site_survey_status": "Required",
+      "target_commissioning_days": 120
+    },
+    {
+      "email": "demo.mykola.shevchenko@teplotec.invalid",
+      "object_type": "Private House",
+      "object_location": "Ірпінь, Київська область",
+      "heated_area_m2": 240,
+      "existing_heat_source": "Electric",
+      "estimated_heat_loss_kw": 16,
+      "requested_system": "Geothermal",
+      "drilling_feasibility": "Possible",
+      "site_survey_status": "Completed",
+      "target_commissioning_days": 90
+    },
+    {
+      "email": "demo.nataliia.kovalenko@teplotec.invalid",
+      "object_type": "Private House",
+      "object_location": "Київська область",
+      "heated_area_m2": 160,
+      "existing_heat_source": "Solid Fuel",
+      "estimated_heat_loss_kw": 11,
+      "requested_system": "Geothermal",
+      "drilling_feasibility": "Possible",
+      "site_survey_status": "Completed",
+      "target_commissioning_days": 75
+    },
+    {
+      "email": "demo.iryna.hnatiuk@teplotec.invalid",
+      "object_type": "Private House",
+      "object_location": "Вишгород, Київська область",
+      "heated_area_m2": 210,
+      "existing_heat_source": "Gas",
+      "estimated_heat_loss_kw": 14.5,
+      "requested_system": "Geothermal",
+      "drilling_feasibility": "Possible",
+      "site_survey_status": "Completed",
+      "target_commissioning_days": 45
+    },
+    {
+      "email": "demo.comfort.house@teplotec.invalid",
+      "object_type": "Multi-unit Residential",
+      "object_location": "Київ",
+      "heated_area_m2": 3200,
+      "existing_heat_source": "District Heating",
+      "estimated_heat_loss_kw": 180,
+      "requested_system": "Geothermal",
+      "drilling_feasibility": "Constrained",
+      "site_survey_status": "Scheduled",
+      "target_commissioning_days": 180
+    },
+    {
+      "email": "demo.lyceum17@teplotec.invalid",
+      "object_type": "Public Sector",
+      "object_location": "Київська область",
+      "heated_area_m2": 4800,
+      "existing_heat_source": "District Heating",
+      "estimated_heat_loss_kw": 260,
+      "requested_system": "Geothermal",
+      "drilling_feasibility": "Constrained",
+      "site_survey_status": "Required",
+      "target_commissioning_days": 240
+    },
+    {
+      "email": "demo.agroterm@teplotec.invalid",
+      "object_type": "Agricultural",
+      "object_location": "Київська область",
+      "heated_area_m2": 6200,
+      "existing_heat_source": "Gas",
+      "estimated_heat_loss_kw": 410,
+      "requested_system": "Hybrid",
+      "drilling_feasibility": "Possible",
+      "site_survey_status": "Required",
+      "target_commissioning_days": 210
+    },
+    {
+      "email": "demo.northhub@teplotec.invalid",
+      "object_type": "Commercial",
+      "object_location": "Львівська область",
+      "heated_area_m2": 12500,
+      "existing_heat_source": "Gas",
+      "estimated_heat_loss_kw": 650,
+      "requested_system": "Geothermal",
+      "drilling_feasibility": "Possible",
+      "site_survey_status": "Required",
+      "target_commissioning_days": 270
+    }
+  ]
+}
