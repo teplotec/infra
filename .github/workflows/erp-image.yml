@@ -24,7 +24,7 @@ env:
   IMAGE_NAME: ghcr.io/teplotec/erpnext
   FRAPPE_DOCKER_VERSION: v3.2.1
   ERPNEXT_VERSION: v16.31.1
-  FRAPPE_CRM_VERSION: v1.80.0
+  FRAPPE_CRM_VERSION: v1.81.0
 
 jobs:
   build:
