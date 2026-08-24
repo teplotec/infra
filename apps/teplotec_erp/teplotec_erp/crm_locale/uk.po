@@ -1,0 +1,229 @@
+# TEPLOTEC reviewed Ukrainian translations for Frappe CRM.
+# This overlay is merged with crm/locale/main.pot from the pinned Frappe CRM release
+# during the immutable ERP image build.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Frappe CRM v1.81.0\n"
+"Language: uk\n"
+"Language-Team: TEPLOTEC\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-TEPLOTEC-Upstream-CRM-Version: v1.81.0\n"
+
+msgid "Actions"
+msgstr "Дії"
+
+msgid "Activity"
+msgstr "Активність"
+
+msgid "Add"
+msgstr "Додати"
+
+msgid "Add Filter"
+msgstr "Додати фільтр"
+
+msgid "Add Note"
+msgstr "Додати нотатку"
+
+msgid "Add Product"
+msgstr "Додати продукт"
+
+msgid "Add Task"
+msgstr "Додати завдання"
+
+msgid "Address"
+msgstr "Адреса"
+
+msgid "Amount"
+msgstr "Сума"
+
+msgid "Assign"
+msgstr "Призначити"
+
+msgid "Assigned To"
+msgstr "Призначено"
+
+msgid "Call Logs"
+msgstr "Журнал дзвінків"
+
+msgid "Cancel"
+msgstr "Скасувати"
+
+msgid "City"
+msgstr "Місто"
+
+msgid "Contact"
+msgstr "Контакт"
+
+msgid "Contacted"
+msgstr "Контакт встановлено"
+
+msgid "Contacts"
+msgstr "Контакти"
+
+msgid "Convert to Deal"
+msgstr "Перетворити на угоду"
+
+msgid "Country"
+msgstr "Країна"
+
+msgid "Create"
+msgstr "Створити"
+
+msgid "Create Quotation"
+msgstr "Створити комерційну пропозицію"
+
+msgid "Currency"
+msgstr "Валюта"
+
+msgid "Dashboard"
+msgstr "Панель"
+
+msgid "Date"
+msgstr "Дата"
+
+msgid "Deal"
+msgstr "Угода"
+
+msgid "Deal Owner"
+msgstr "Власник угоди"
+
+msgid "Deals"
+msgstr "Угоди"
+
+msgid "Delete"
+msgstr "Видалити"
+
+msgid "Description"
+msgstr "Опис"
+
+msgid "Edit"
+msgstr "Редагувати"
+
+msgid "Email"
+msgstr "Електронна пошта"
+
+msgid "Expected Closure Date"
+msgstr "Очікувана дата закриття"
+
+msgid "Expected Deal Value"
+msgstr "Очікувана сума угоди"
+
+msgid "Filter"
+msgstr "Фільтр"
+
+msgid "First Name"
+msgstr "Ім'я"
+
+msgid "Full Name"
+msgstr "Повне ім'я"
+
+msgid "Industry"
+msgstr "Галузь"
+
+msgid "Last Name"
+msgstr "Прізвище"
+
+msgid "Lead"
+msgstr "Лід"
+
+msgid "Lead Owner"
+msgstr "Власник ліда"
+
+msgid "Leads"
+msgstr "Ліди"
+
+msgid "Lost"
+msgstr "Програно"
+
+msgid "Mobile No"
+msgstr "Мобільний номер"
+
+msgid "Negotiation"
+msgstr "Переговори"
+
+msgid "New Contact"
+msgstr "Новий контакт"
+
+msgid "New Deal"
+msgstr "Нова угода"
+
+msgid "New Lead"
+msgstr "Новий лід"
+
+msgid "New Organization"
+msgstr "Нова організація"
+
+msgid "Next Step"
+msgstr "Наступний крок"
+
+msgid "Note"
+msgstr "Нотатка"
+
+msgid "Notes"
+msgstr "Нотатки"
+
+msgid "Organization"
+msgstr "Організація"
+
+msgid "Organizations"
+msgstr "Організації"
+
+msgid "Phone"
+msgstr "Телефон"
+
+msgid "Probability"
+msgstr "Ймовірність"
+
+msgid "Product"
+msgstr "Продукт"
+
+msgid "Products"
+msgstr "Продукти"
+
+msgid "Qualification"
+msgstr "Кваліфікація"
+
+msgid "Qualified"
+msgstr "Кваліфікований"
+
+msgid "Save"
+msgstr "Зберегти"
+
+msgid "Search"
+msgstr "Пошук"
+
+msgid "Settings"
+msgstr "Налаштування"
+
+msgid "Source"
+msgstr "Джерело"
+
+msgid "Status"
+msgstr "Статус"
+
+msgid "Task"
+msgstr "Завдання"
+
+msgid "Tasks"
+msgstr "Завдання"
+
+msgid "Territory"
+msgstr "Територія"
+
+msgid "Time"
+msgstr "Час"
+
+msgid "Title"
+msgstr "Назва"
+
+msgid "Unqualified"
+msgstr "Некваліфікований"
+
+msgid "Website"
+msgstr "Вебсайт"
+
+msgid "Won"
+msgstr "Виграно"
