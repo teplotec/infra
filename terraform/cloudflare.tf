@@ -19,6 +19,10 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "erp" {
         service  = "http://127.0.0.1:3001"
       },
       {
+        hostname = var.groundloop_api_hostname
+        service  = "http://127.0.0.1:8000"
+      },
+      {
         hostname = var.ssh_hostname
         service  = "ssh://127.0.0.1:22"
       },
@@ -52,6 +56,16 @@ resource "cloudflare_dns_record" "project" {
   proxied = true
   ttl     = 1
   comment = "Project app via Cloudflare Tunnel - managed by Terraform"
+}
+
+resource "cloudflare_dns_record" "groundloop_api" {
+  zone_id = var.cloudflare_zone_id
+  name    = var.groundloop_api_hostname
+  type    = "CNAME"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.erp.id}.cfargotunnel.com"
+  proxied = true
+  ttl     = 1
+  comment = "GroundLoop API via Cloudflare Tunnel - managed by Terraform"
 }
 
 resource "cloudflare_dns_record" "ssh" {
