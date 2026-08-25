@@ -67,6 +67,12 @@ variable "project_hostname" {
   default     = "project.teplotec.com"
 }
 
+variable "groundloop_api_hostname" {
+  description = "Public GroundLoop calculation API hostname routed through the existing Cloudflare Tunnel."
+  type        = string
+  default     = "api.groundloop.teplotec.com"
+}
+
 variable "ssh_hostname" {
   description = "Cloudflare Access hostname for administrative SSH over the existing tunnel."
   type        = string
