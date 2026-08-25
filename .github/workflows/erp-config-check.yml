@@ -6,6 +6,7 @@ on:
       - "config/erp-setup.json"
       - "scripts/erp-admin"
       - "scripts/install-github-runner"
+      - "scripts/host-preflight-audit"
       - "ansible/**"
       - "apps/teplotec_erp/**"
       - "docker/erpnext/**"
@@ -27,6 +28,7 @@ jobs:
         run: |
           bash -n scripts/erp-admin
           bash -n scripts/install-github-runner
+          bash -n scripts/host-preflight-audit
 
       - name: Validate setup profile
         shell: bash
@@ -62,7 +64,7 @@ jobs:
       - name: Validate Ansible host configuration
         run: |
           python3 -m pip install --disable-pip-version-check ansible-core
-          ansible-playbook --syntax-check ansible/playbooks/erp-host.yml
+          ansible-playbook --syntax-check ansible/playbooks/app-host.yml
 
       - name: Compile TEPLOTEC ERP Python
         run: python3 -m compileall -q apps/teplotec_erp/teplotec_erp

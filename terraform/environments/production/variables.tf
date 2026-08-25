@@ -9,7 +9,7 @@ variable "cloudflare_zone_id" {
 }
 
 variable "access_trusted_emails" {
-  description = "Trusted internal users. They receive the longest Cloudflare Access session and can access internal TeploTEC applications such as ERP and Project."
+  description = "Trusted internal users for protected TeploTEC applications."
   type        = list(string)
   default     = []
 }
@@ -45,12 +45,12 @@ variable "access_guest_session_duration" {
 }
 
 variable "ssh_public_key" {
-  description = "Public SSH key installed on the Hetzner server."
+  description = "Public SSH key installed on the production application host."
   type        = string
 }
 
 variable "ssh_allowed_cidrs" {
-  description = "CIDRs allowed to connect to SSH. Empty by default, so port 22 is closed from the Internet."
+  description = "CIDRs allowed to connect to SSH directly. Empty by default, so TCP/22 stays closed from the Internet."
   type        = list(string)
   default     = []
 }
@@ -68,31 +68,47 @@ variable "project_hostname" {
 }
 
 variable "groundloop_api_hostname" {
-  description = "Public GroundLoop calculation API hostname routed through the existing Cloudflare Tunnel."
+  description = "GroundLoop calculation API hostname routed through the production Cloudflare origin tunnel."
   type        = string
   default     = "api.groundloop.teplotec.com"
 }
 
 variable "ssh_hostname" {
-  description = "Cloudflare Access hostname for administrative SSH over the existing tunnel."
+  description = "Cloudflare Access hostname for administrative SSH."
   type        = string
   default     = "ssh.teplotec.com"
 }
 
-variable "server_type" {
-  description = "Hetzner Cloud server type."
+variable "application_host_sequence" {
+  description = "One-based ordinal for the production application host."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.application_host_sequence >= 1 && floor(var.application_host_sequence) == var.application_host_sequence
+    error_message = "application_host_sequence must be a positive integer."
+  }
+}
+
+variable "application_server_type" {
+  description = "Hetzner Cloud server type for the production application host."
   type        = string
   default     = "cx33"
 }
 
-variable "server_location" {
-  description = "Hetzner Cloud location."
+variable "application_server_location" {
+  description = "Hetzner Cloud location code for the production application host. Benchmark Helsinki, Nuremberg, and Falkenstein before changing it."
   type        = string
   default     = "hel1"
+
+  validation {
+    condition     = contains(["hel1", "nbg1", "fsn1"], var.application_server_location)
+    error_message = "application_server_location must be one of hel1, nbg1, or fsn1."
+  }
 }
 
-variable "server_image" {
-  description = "Hetzner Cloud OS image."
+variable "application_server_image" {
+  description = "Hetzner Cloud OS image for the production application host."
   type        = string
   default     = "ubuntu-24.04"
 }

@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+if [[ $EUID -ne 0 ]]; then
+  echo "Run as root so the audit can verify root-owned paths without printing secret values." >&2
+  exit 1
+fi
+
+section() {
+  printf '\n== %s ==\n' "$1"
+}
+
+show_path() {
+  local path="$1"
+  if [[ -e "$path" ]]; then
+    stat --printf='%A %U:%G %s bytes %n\n' "$path"
+  else
+    printf 'MISSING %s\n' "$path"
+  fi
+}
+
+section "Host identity"
+hostnamectl --static || hostname
+printf 'kernel: '
+uname -r
+
+section "Known durable/local credential files (metadata only)"
+show_path /root/erpnext-credentials.txt
+show_path /opt/teplotec/erpnext/gitops/erpnext.env
+show_path /home/github-runner/actions-runner/.runner
+show_path /home/github-runner/actions-runner/.credentials
+show_path /home/github-runner/actions-runner/.credentials_rsaparams
+
+if [[ -f /root/erpnext-credentials.txt ]]; then
+  printf 'ERP credential keys present: '
+  awk -F= '/^[A-Z0-9_]+=/{print $1}' /root/erpnext-credentials.txt | paste -sd, -
+fi
+
+section "GitHub runner identity (non-secret fields only)"
+if [[ -f /home/github-runner/actions-runner/.runner ]] && command -v python3 >/dev/null 2>&1; then
+  python3 - <<'PY'
+import json
+from pathlib import Path
+p = Path('/home/github-runner/actions-runner/.runner')
+obj = json.loads(p.read_text())
+for key in ('agentId', 'agentName', 'poolId', 'poolName', 'serverUrl', 'gitHubUrl'):
+    if key in obj:
+        print(f'{key}: {obj[key]}')
+PY
+else
+  echo "runner not registered"
+fi
+
+section "Repository runner systemd units"
+systemctl list-unit-files 'actions.runner.teplotec-infra.*.service' --no-pager --no-legend 2>/dev/null || true
+
+section "TeploTEC filesystem roots"
+if [[ -d /opt/teplotec ]]; then
+  find /opt/teplotec -mindepth 1 -maxdepth 2 -type d -printf '%p\n' | sort
+else
+  echo "/opt/teplotec does not exist"
+fi
+
+section "Environment/credential-like files under TeploTEC roots (paths only)"
+if [[ -d /opt/teplotec ]]; then
+  find /opt/teplotec -maxdepth 5 -type f \
+    \( -name '*.env' -o -name '*.secret' -o -name '*credentials*' -o -name '*token*' \) \
+    -printf '%M %u:%g %p\n' | sort || true
+fi
+
+section "Docker workloads"
+if command -v docker >/dev/null 2>&1; then
+  docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
+else
+  echo "docker not installed"
+fi
+
+section "Custom TeploTEC helpers"
+find /usr/local/sbin -maxdepth 1 -type f -name 'teplotec-*' -printf '%M %u:%g %p\n' 2>/dev/null | sort || true
+
+section "Root crontab entries (commands only; review for manual automation)"
+crontab -l 2>/dev/null || echo "no root crontab"
+
+section "Audit conclusion"
+echo "No secret values were intentionally printed. Review the paths/workloads above before replacing the VM."

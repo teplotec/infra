@@ -1,12 +1,12 @@
-resource "cloudflare_zero_trust_tunnel_cloudflared" "erp" {
+resource "cloudflare_zero_trust_tunnel_cloudflared" "platform" {
   account_id = var.cloudflare_account_id
-  name       = "teplotec-erp"
+  name       = local.origin_tunnel_name
   config_src = "cloudflare"
 }
 
-resource "cloudflare_zero_trust_tunnel_cloudflared_config" "erp" {
+resource "cloudflare_zero_trust_tunnel_cloudflared_config" "platform" {
   account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.erp.id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.platform.id
 
   config = {
     ingress = [
@@ -33,16 +33,16 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "erp" {
   }
 }
 
-data "cloudflare_zero_trust_tunnel_cloudflared_token" "erp" {
+data "cloudflare_zero_trust_tunnel_cloudflared_token" "platform" {
   account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.erp.id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.platform.id
 }
 
 resource "cloudflare_dns_record" "erp" {
   zone_id = var.cloudflare_zone_id
   name    = var.erp_hostname
   type    = "CNAME"
-  content = "${cloudflare_zero_trust_tunnel_cloudflared.erp.id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.platform.id}.cfargotunnel.com"
   proxied = true
   ttl     = 1
   comment = "ERP via Cloudflare Tunnel - managed by Terraform"
@@ -52,7 +52,7 @@ resource "cloudflare_dns_record" "project" {
   zone_id = var.cloudflare_zone_id
   name    = var.project_hostname
   type    = "CNAME"
-  content = "${cloudflare_zero_trust_tunnel_cloudflared.erp.id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.platform.id}.cfargotunnel.com"
   proxied = true
   ttl     = 1
   comment = "Project app via Cloudflare Tunnel - managed by Terraform"
@@ -62,7 +62,7 @@ resource "cloudflare_dns_record" "groundloop_api" {
   zone_id = var.cloudflare_zone_id
   name    = var.groundloop_api_hostname
   type    = "CNAME"
-  content = "${cloudflare_zero_trust_tunnel_cloudflared.erp.id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.platform.id}.cfargotunnel.com"
   proxied = true
   ttl     = 1
   comment = "GroundLoop API via Cloudflare Tunnel - managed by Terraform"
@@ -72,7 +72,7 @@ resource "cloudflare_dns_record" "ssh" {
   zone_id = var.cloudflare_zone_id
   name    = var.ssh_hostname
   type    = "CNAME"
-  content = "${cloudflare_zero_trust_tunnel_cloudflared.erp.id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.platform.id}.cfargotunnel.com"
   proxied = true
   ttl     = 1
   comment = "Administrative SSH via Cloudflare Tunnel - managed by Terraform"

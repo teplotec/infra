@@ -1,4 +1,4 @@
-erp:
+app_hosts:
   hosts:
-    teplotec-erp:
+    teplotec-production-eu-central-helsinki-application-01:
       ansible_user: root

@@ -18,7 +18,7 @@ concurrency:
 jobs:
   reset:
     if: github.ref == 'refs/heads/main' && inputs.confirmation == 'RESET ERP'
-    runs-on: [self-hosted, linux, x64, teplotec-erp-admin]
+    runs-on: [self-hosted, linux, x64, teplotec-production-erp-admin]
     environment: production
 
     steps:
