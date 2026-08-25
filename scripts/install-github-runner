@@ -6,8 +6,8 @@ RUNNER_SHA256="04cf0be1aff4c3ec3554466c39124ca250e3effd8873bb7e8d68535aa9505d5d"
 RUNNER_USER="github-runner"
 RUNNER_HOME="/home/$RUNNER_USER"
 RUNNER_DIR="$RUNNER_HOME/actions-runner"
-RUNNER_NAME="teplotec-erp"
-RUNNER_LABELS="teplotec-erp-admin"
+RUNNER_NAME="teplotec-production-eu-central-helsinki-application-01"
+RUNNER_LABELS="teplotec-production-application-host,teplotec-production-erp-admin"
 REPOSITORY_URL="https://github.com/teplotec/infra"
 
 if [[ $EUID -ne 0 ]]; then
@@ -73,4 +73,4 @@ unset registration_token
 ./svc.sh start
 ./svc.sh status
 
-echo "GitHub Actions runner $RUNNER_NAME installed with label $RUNNER_LABELS"
+echo "GitHub Actions runner $RUNNER_NAME installed with labels $RUNNER_LABELS"

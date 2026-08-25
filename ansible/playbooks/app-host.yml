@@ -1,6 +1,6 @@
 ---
-- name: Configure TeploTEC ERP host
-  hosts: erp
+- name: Configure TeploTEC production application host
+  hosts: app_hosts
   become: true
   gather_facts: true
 
@@ -8,7 +8,6 @@
     runner_user: github-runner
     runner_home: /home/github-runner
     runner_dir: /home/github-runner/actions-runner
-    runner_service: actions.runner.teplotec-infra.teplotec-erp.service
     runner_registration_token: >-
       {{ lookup('ansible.builtin.env', 'GITHUB_RUNNER_REGISTRATION_TOKEN') | default('', true) }}
 
@@ -78,10 +77,12 @@
       when: not runner_registration.stat.exists
       changed_when: true
 
-    - name: Check whether the runner systemd service exists
-      ansible.builtin.stat:
-        path: "/etc/systemd/system/{{ runner_service }}"
-      register: runner_service_file
+    - name: Discover installed repository runner services
+      ansible.builtin.find:
+        paths: /etc/systemd/system
+        patterns: "actions.runner.teplotec-infra.*.service"
+        file_type: file
+      register: runner_services
 
     - name: Install runner systemd service when registration exists without a service
       ansible.builtin.command:
@@ -89,12 +90,27 @@
         chdir: "{{ runner_dir }}"
       when:
         - runner_registration.stat.exists
-        - not runner_service_file.stat.exists
+        - runner_services.matched == 0
       changed_when: true
+
+    - name: Rediscover repository runner services after installation
+      ansible.builtin.find:
+        paths: /etc/systemd/system
+        patterns: "actions.runner.teplotec-infra.*.service"
+        file_type: file
+      register: runner_services_after
+
+    - name: Require exactly one repository runner service
+      ansible.builtin.assert:
+        that:
+          - runner_services_after.matched == 1
+        fail_msg: >-
+          Expected exactly one teplotec/infra GitHub runner service on this host.
+          Remove stale runner services before continuing.
 
     - name: Ensure GitHub runner service is enabled and running
       ansible.builtin.systemd_service:
-        name: "{{ runner_service }}"
+        name: "{{ runner_services_after.files[0].path | basename }}"
         enabled: true
         state: started
         daemon_reload: true
