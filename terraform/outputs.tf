@@ -8,6 +8,11 @@ output "project_url" {
   value       = "https://${var.project_hostname}"
 }
 
+output "groundloop_api_url" {
+  description = "GroundLoop API URL routed through Cloudflare Tunnel."
+  value       = "https://${var.groundloop_api_hostname}"
+}
+
 output "ssh_hostname" {
   description = "Administrative SSH hostname protected by Cloudflare Access."
   value       = var.ssh_hostname
@@ -19,7 +24,7 @@ output "server_id" {
 }
 
 output "server_ipv4" {
-  description = "Hetzner public IPv4. No ERP or Project HTTP ports are exposed by the firewall."
+  description = "Hetzner public IPv4. Application HTTP ports are not exposed by the firewall."
   value       = hcloud_server.erp.ipv4_address
 }
 
