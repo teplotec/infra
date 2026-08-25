@@ -68,9 +68,9 @@ variable "project_hostname" {
 }
 
 variable "groundloop_api_hostname" {
-  description = "GroundLoop calculation API hostname routed through the production Cloudflare origin tunnel."
+  description = "GroundLoop calculation API hostname routed through the production Cloudflare origin tunnel. Keep this as a first-level teplotec.com subdomain so Cloudflare Universal SSL covers it."
   type        = string
-  default     = "api.groundloop.teplotec.com"
+  default     = "groundloop-api.teplotec.com"
 }
 
 variable "ssh_hostname" {
