@@ -6,7 +6,9 @@ GroundLoop is split into two deployable runtimes from `teplotec/groundloop`:
 - Python API: FastAPI + GroundLoop calculation core deployed on the shared production application host `teplotec-production-eu-central-helsinki-application-01`.
 
 The public application hostname is `groundloop.teplotec.com`.
-The Python API hostname is `api.groundloop.teplotec.com`.
+The Python API hostname is `groundloop-api.teplotec.com`.
+
+The API hostname intentionally uses a first-level `teplotec.com` subdomain. Cloudflare Universal SSL on a full DNS zone covers the apex and first-level subdomains, but it does not cover deeper names such as `api.groundloop.teplotec.com` without an advanced certificate.
 
 ## Network boundary
 
@@ -15,7 +17,7 @@ Browser
   -> groundloop.teplotec.com
   -> Cloudflare Worker (Next.js)
   -> /api/calculate route handler
-  -> https://api.groundloop.teplotec.com
+  -> https://groundloop-api.teplotec.com
   -> Cloudflare Tunnel
   -> cloudflared on teplotec-production-eu-central-helsinki-application-01
   -> 127.0.0.1:8000
@@ -24,7 +26,7 @@ Browser
 
 The API container must bind only to `127.0.0.1:8000`. Do not open port 8000 in the Hetzner firewall and do not create a DNS record pointing directly at the server IP.
 
-`api.groundloop.teplotec.com` intentionally has no interactive Cloudflare Access application because the public GroundLoop Worker calls it server-to-server. Add application-to-application authentication and rate limiting before treating the API as a stable public compute surface.
+`groundloop-api.teplotec.com` intentionally has no interactive Cloudflare Access application because the public GroundLoop Worker calls it server-to-server. Add application-to-application authentication and rate limiting before treating the API as a stable public compute surface.
 
 ## 1. Apply production infrastructure
 
@@ -36,12 +38,12 @@ The production Terraform root is:
 terraform/environments/production
 ```
 
-Terraform creates the proxied `api.groundloop.teplotec.com` CNAME and adds an ingress rule to the existing production Cloudflare Tunnel. Do not create that DNS record manually in the Cloudflare dashboard.
+Terraform creates the proxied `groundloop-api.teplotec.com` CNAME and adds an ingress rule to the existing production Cloudflare Tunnel. Do not create that DNS record manually in the Cloudflare dashboard.
 
 Expected production origin route:
 
 ```text
-api.groundloop.teplotec.com -> http://127.0.0.1:8000
+groundloop-api.teplotec.com -> http://127.0.0.1:8000
 ```
 
 ## 2. First Python API deployment
@@ -72,7 +74,7 @@ curl --fail http://127.0.0.1:8000/health
 After Terraform applies the GroundLoop tunnel/DNS route, verify through Cloudflare:
 
 ```bash
-curl --fail https://api.groundloop.teplotec.com/health
+curl --fail https://groundloop-api.teplotec.com/health
 ```
 
 ## 3. Create the Cloudflare Worker frontend
@@ -101,7 +103,7 @@ After the Worker exists:
 1. Open `Workers & Pages` -> `groundloop` -> `Settings`.
 2. Open `Variables and Secrets`.
 3. Add a Text variable named `GROUNDLOOP_API_URL`.
-4. Set its value to `https://api.groundloop.teplotec.com`.
+4. Set its value to `https://groundloop-api.teplotec.com`.
 5. Deploy the settings change if Cloudflare prompts for a deployment.
 
 This is not a secret. The browser does not consume it directly; the Next.js Worker uses it when `/api/calculate` proxies a calculation request to FastAPI.
@@ -138,7 +140,7 @@ Verify in this order:
 curl --fail http://127.0.0.1:8000/health
 
 # Through the Cloudflare Tunnel
-curl --fail https://api.groundloop.teplotec.com/health
+curl --fail https://groundloop-api.teplotec.com/health
 ```
 
 Then open the Worker preview URL and run a calculation. Finally open:
