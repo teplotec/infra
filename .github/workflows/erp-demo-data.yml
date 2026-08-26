@@ -1,4 +1,4 @@
-name: ERP Demo Data
+name: ERP / Production / 20 Seed Demo Data
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
     if: >-
       github.ref == 'refs/heads/main' &&
       inputs.confirmation == 'SEED DEMO'
-    runs-on: [self-hosted, linux, x64, teplotec-erp-admin]
+    runs-on: [self-hosted, linux, x64, teplotec-production-erp-admin]
     environment: production
 
     steps:

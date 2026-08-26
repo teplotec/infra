@@ -1,4 +1,4 @@
-name: ERP Reset
+name: ERP / Production / 90 Reset
 
 on:
   workflow_dispatch:

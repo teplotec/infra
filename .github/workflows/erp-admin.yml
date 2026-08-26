@@ -1,4 +1,4 @@
-name: ERP Admin
+name: ERP / Production / 10 Admin
 
 on:
   workflow_dispatch:
