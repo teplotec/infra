@@ -1,4 +1,4 @@
-name: Terraform Plan
+name: Platform / Production / 01 Plan Infrastructure
 
 on:
   pull_request:

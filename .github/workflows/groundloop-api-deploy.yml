@@ -1,0 +1,70 @@
+name: GroundLoop / Production / 01 Deploy API
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type DEPLOY to deploy GroundLoop API from main"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: groundloop-production-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.confirmation == 'DEPLOY'
+    runs-on: [self-hosted, linux, x64, teplotec-production-application-host]
+    environment: production
+
+    steps:
+      - name: Deploy GroundLoop API from main
+        run: sudo /usr/local/sbin/teplotec-groundloop-api-admin deploy
+
+      - name: Verify public API health through Cloudflare
+        run: >-
+          curl --fail --show-error --retry 5 --retry-delay 2
+          https://groundloop-api.teplotec.com/health
+
+      - name: Verify production calculation endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --retry 3 --retry-delay 2 \
+            -X POST \
+            https://groundloop-api.teplotec.com/v1/calculate \
+            -H 'content-type: application/json' \
+            -d '{
+              "total_flow_m3_h": 2.4,
+              "borefield": {
+                "boreholes": 5,
+                "depth_m": 61,
+                "header_run_m": 12,
+                "configuration": "single_u"
+              },
+              "fluid": {
+                "id": "reference",
+                "label": "Reference",
+                "density_kg_m3": 1000,
+                "dynamic_viscosity_pa_s": 0.001,
+                "temperature_c": 20,
+                "concentration_percent": 0
+              },
+              "pipe_candidates": [{
+                "id": "40x3.7",
+                "label": "PE100-RC 40 x 3.7",
+                "material": "PE100-RC",
+                "outer_diameter_mm": 40,
+                "wall_thickness_mm": 3.7
+              }],
+              "pump": {
+                "flow_m3_h": 2.4,
+                "available_head_kpa": 60
+              }
+            }' >/dev/null

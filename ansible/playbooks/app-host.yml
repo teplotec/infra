@@ -17,6 +17,7 @@
         name:
           - ca-certificates
           - curl
+          - git
           - sudo
           - tar
         state: present
@@ -42,6 +43,23 @@
       ansible.builtin.copy:
         content: "{{ runner_user }} ALL=(root) NOPASSWD: /usr/local/sbin/teplotec-erp-admin *\n"
         dest: /etc/sudoers.d/teplotec-erp-admin
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+
+    - name: Install restricted GroundLoop API deployment helper
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../scripts/groundloop-api-admin"
+        dest: /usr/local/sbin/teplotec-groundloop-api-admin
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Install restricted sudo policy for GroundLoop API deployment helper
+      ansible.builtin.copy:
+        content: "{{ runner_user }} ALL=(root) NOPASSWD: /usr/local/sbin/teplotec-groundloop-api-admin *\n"
+        dest: /etc/sudoers.d/teplotec-groundloop-api-admin
         owner: root
         group: root
         mode: "0440"

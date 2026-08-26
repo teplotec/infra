@@ -1,4 +1,4 @@
-name: ERP Pilot
+name: ERP / Production / 30 Create Pilot
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
     if: >-
       github.ref == 'refs/heads/main' &&
       inputs.confirmation == 'CREATE PILOT'
-    runs-on: [self-hosted, linux, x64, teplotec-erp-admin]
+    runs-on: [self-hosted, linux, x64, teplotec-production-erp-admin]
     environment: production
 
     steps:

@@ -1,15 +1,17 @@
-name: ERP Config Check
+name: ERP / CI / 01 Validate Configuration
 
 on:
   pull_request:
     paths:
       - "config/erp-setup.json"
       - "scripts/erp-admin"
+      - "scripts/groundloop-api-admin"
       - "scripts/install-github-runner"
       - "scripts/host-preflight-audit"
       - "ansible/**"
       - "apps/teplotec_erp/**"
       - "docker/erpnext/**"
+      - ".github/workflows/groundloop-api-deploy.yml"
       - ".github/workflows/erp-reset.yml"
       - ".github/workflows/erp-pilot.yml"
       - ".github/workflows/erp-config-check.yml"
@@ -27,6 +29,7 @@ jobs:
       - name: Validate admin scripts
         run: |
           bash -n scripts/erp-admin
+          bash -n scripts/groundloop-api-admin
           bash -n scripts/install-github-runner
           bash -n scripts/host-preflight-audit
 

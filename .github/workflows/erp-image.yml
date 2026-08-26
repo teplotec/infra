@@ -1,4 +1,4 @@
-name: ERP Image
+name: ERP / Image / 01 Build
 
 on:
   pull_request:
