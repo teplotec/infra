@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+REPOSITORY_URL="https://github.com/teplotec/groundloop.git"
+CHECKOUT_DIR="/opt/teplotec/groundloop/app"
+IMAGE_NAME="teplotec-groundloop-api"
+CONTAINER_NAME="groundloop-api"
+LOCAL_HEALTH_URL="http://127.0.0.1:8000/health"
+
+require_root() {
+  if [[ $EUID -ne 0 ]]; then
+    echo "Run this helper as root" >&2
+    exit 1
+  fi
+}
+
+require_commands() {
+  local command_name
+  for command_name in git docker curl; do
+    if ! command -v "$command_name" >/dev/null 2>&1; then
+      echo "Required command is missing: $command_name" >&2
+      exit 1
+    fi
+  done
+}
+
+wait_for_health() {
+  local attempt
+  for attempt in $(seq 1 20); do
+    if curl --fail --silent --show-error --max-time 3 "$LOCAL_HEALTH_URL" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+start_container() {
+  local image="$1"
+  docker run -d \
+    --name "$CONTAINER_NAME" \
+    --restart unless-stopped \
+    -p 127.0.0.1:8000:8000 \
+    "$image" >/dev/null
+}
+
+status() {
+  docker ps --filter "name=^/${CONTAINER_NAME}$" --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+  curl --fail --show-error --max-time 5 "$LOCAL_HEALTH_URL"
+  printf '\n'
+}
+
+deploy() {
+  install -d -o root -g root -m 0755 "$(dirname "$CHECKOUT_DIR")"
+
+  if [[ -e "$CHECKOUT_DIR" && ! -d "$CHECKOUT_DIR/.git" ]]; then
+    echo "$CHECKOUT_DIR exists but is not a Git checkout; refusing to overwrite it" >&2
+    exit 1
+  fi
+
+  if [[ ! -d "$CHECKOUT_DIR/.git" ]]; then
+    git clone --branch main --single-branch "$REPOSITORY_URL" "$CHECKOUT_DIR"
+  fi
+
+  git -C "$CHECKOUT_DIR" remote set-url origin "$REPOSITORY_URL"
+  git -C "$CHECKOUT_DIR" fetch --prune origin main
+  git -C "$CHECKOUT_DIR" checkout -B main origin/main
+  git -C "$CHECKOUT_DIR" reset --hard origin/main
+
+  local revision
+  revision="$(git -C "$CHECKOUT_DIR" rev-parse --short=12 HEAD)"
+  local revision_image="${IMAGE_NAME}:${revision}"
+  local previous_image=""
+  previous_image="$(docker inspect --format '{{.Image}}' "$CONTAINER_NAME" 2>/dev/null || true)"
+
+  docker build \
+    --tag "$revision_image" \
+    --tag "${IMAGE_NAME}:latest" \
+    "$CHECKOUT_DIR"
+
+  docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+  start_container "$revision_image"
+
+  if ! wait_for_health; then
+    echo "GroundLoop API failed its local health check after deploying $revision" >&2
+    docker logs --tail 100 "$CONTAINER_NAME" >&2 || true
+    docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+
+    if [[ -n "$previous_image" ]]; then
+      echo "Rolling back to previous image $previous_image" >&2
+      start_container "$previous_image"
+      if ! wait_for_health; then
+        echo "Rollback container also failed its local health check" >&2
+      fi
+    fi
+    exit 1
+  fi
+
+  echo "GroundLoop API deployed revision $revision"
+  status
+}
+
+require_root
+require_commands
+
+case "${1:-status}" in
+  status)
+    status
+    ;;
+  deploy)
+    deploy
+    ;;
+  *)
+    echo "Usage: $0 {status|deploy}" >&2
+    exit 64
+    ;;
+esac

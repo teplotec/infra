@@ -1,22 +1,22 @@
 # GroundLoop deployment
 
-GroundLoop is split into two deployable runtimes from `teplotec/groundloop`:
+GroundLoop has two production runtimes from `teplotec/groundloop`:
 
-- `apps/web`: Next.js UI deployed to Cloudflare Workers.
-- Python API: FastAPI + GroundLoop calculation core deployed on the shared production application host `teplotec-production-eu-central-helsinki-application-01`.
+- `apps/web`: Next-compatible UI deployed to Cloudflare Worker `groundloop-web`.
+- Python API: FastAPI + calculation core deployed on `teplotec-production-eu-central-helsinki-application-01`.
 
-The public application hostname is `groundloop.teplotec.com`.
-The Python API hostname is `groundloop-api.teplotec.com`.
+Public application: `https://groundloop.teplotec.com`.
+Python API: `https://groundloop-api.teplotec.com`.
 
-The API hostname intentionally uses a first-level `teplotec.com` subdomain. Cloudflare Universal SSL on a full DNS zone covers the apex and first-level subdomains, but it does not cover deeper names such as `api.groundloop.teplotec.com` without an advanced certificate.
+The API hostname intentionally uses a first-level `teplotec.com` subdomain so Cloudflare Universal SSL covers it.
 
 ## Network boundary
 
 ```text
 Browser
   -> groundloop.teplotec.com
-  -> Cloudflare Worker (Next.js)
-  -> /api/calculate route handler
+  -> Cloudflare Worker groundloop-web
+  -> /api/calculate
   -> https://groundloop-api.teplotec.com
   -> Cloudflare Tunnel
   -> cloudflared on teplotec-production-eu-central-helsinki-application-01
@@ -24,149 +24,123 @@ Browser
   -> GroundLoop FastAPI container
 ```
 
-The API container must bind only to `127.0.0.1:8000`. Do not open port 8000 in the Hetzner firewall and do not create a DNS record pointing directly at the server IP.
+The API container binds only to `127.0.0.1:8000`. Do not open port 8000 in the Hetzner firewall and do not point public DNS directly at the server IP.
 
-`groundloop-api.teplotec.com` intentionally has no interactive Cloudflare Access application because the public GroundLoop Worker calls it server-to-server. Add application-to-application authentication and rate limiting before treating the API as a stable public compute surface.
+`groundloop-api.teplotec.com` intentionally has no interactive Cloudflare Access application because the public Worker calls it server-to-server. Add application-to-application authentication and rate limiting before treating it as a stable public compute surface.
 
-## 1. Apply production infrastructure
+## Infrastructure
 
-Merge the GroundLoop API route and platform-infrastructure PRs first. Then run the `Terraform Apply` workflow from `main` with confirmation `APPLY`.
-
-The production Terraform root is:
+Production Terraform lives in:
 
 ```text
 terraform/environments/production
 ```
 
-Terraform creates the proxied `groundloop-api.teplotec.com` CNAME and adds an ingress rule to the existing production Cloudflare Tunnel. Do not create that DNS record manually in the Cloudflare dashboard.
-
-Expected production origin route:
+Terraform owns the proxied `groundloop-api.teplotec.com` DNS record and Cloudflare Tunnel ingress:
 
 ```text
 groundloop-api.teplotec.com -> http://127.0.0.1:8000
 ```
 
-## 2. First Python API deployment
+Do not create this DNS record manually.
 
-Connect through the Cloudflare Access SSH route, then clone and run the GroundLoop container:
+## Cloudflare Worker frontend
+
+Worker configuration is version-controlled in `teplotec/groundloop/apps/web/wrangler.jsonc`. That file owns the worker name, production custom domain, runtime backend URL, compatibility settings, and observability configuration.
+
+The vinext migration uses its native Cloudflare deployment command from `apps/web/package.json`. In Workers Builds, use:
+
+```text
+Root directory: apps/web
+Production branch: main
+Deploy command: npm run deploy
+Version / preview command: npm run deploy:preview
+```
+
+The runtime backend URL is not a secret and is committed as:
+
+```text
+GROUNDLOOP_API_URL=https://groundloop-api.teplotec.com
+```
+
+Do not maintain a conflicting build-time variable in the Cloudflare dashboard.
+
+## One-time host bootstrap for automated API deployment
+
+The production runner is deliberately not allowed arbitrary passwordless `sudo`. Ansible installs a root-owned deployment helper and a narrow sudo policy for only that helper.
+
+After the infra change is merged, apply the production application-host playbook once:
+
+```bash
+cp -n ansible/inventory/production.yml.example ansible/inventory/production.yml
+ansible-playbook \
+  -i ansible/inventory/production.yml \
+  ansible/playbooks/app-host.yml
+```
+
+On an existing host the already-registered GitHub runner is reused, so no new registration token is required.
+
+Verify the helper on the host if desired:
 
 ```bash
 ssh teplotec-production-eu-central-helsinki-application-01
+sudo /usr/local/sbin/teplotec-groundloop-api-admin status
+```
 
-sudo mkdir -p /opt/teplotec/groundloop
-sudo chown "$USER":"$USER" /opt/teplotec/groundloop
-cd /opt/teplotec/groundloop
+## Normal API deployment
 
-git clone https://github.com/teplotec/groundloop.git app
-cd app
+After the one-time helper bootstrap, API releases no longer require an SSH deployment sequence.
 
-docker build -t teplotec-groundloop-api:latest .
-docker rm -f groundloop-api 2>/dev/null || true
-docker run -d \
-  --name groundloop-api \
-  --restart unless-stopped \
-  -p 127.0.0.1:8000:8000 \
-  teplotec-groundloop-api:latest
+In GitHub Actions for `teplotec/infra`, run:
 
+```text
+GroundLoop / Production / 01 Deploy API
+```
+
+from `main` and enter:
+
+```text
+DEPLOY
+```
+
+The restricted helper then:
+
+1. synchronizes `/opt/teplotec/groundloop/app` to `teplotec/groundloop` `main`;
+2. builds a revision-tagged Docker image;
+3. replaces only the `groundloop-api` container;
+4. keeps port 8000 bound to `127.0.0.1`;
+5. verifies local health and rolls back to the previous container image if the new container fails health;
+6. lets the workflow verify the public Cloudflare health endpoint and a real calculation request.
+
+## Verification
+
+Local origin:
+
+```bash
 curl --fail http://127.0.0.1:8000/health
 ```
 
-After Terraform applies the GroundLoop tunnel/DNS route, verify through Cloudflare:
+Through Cloudflare Tunnel:
 
 ```bash
 curl --fail https://groundloop-api.teplotec.com/health
 ```
 
-## 3. Create the Cloudflare Worker frontend
-
-Use Cloudflare Workers, not Pages. The current Next.js app contains the `/api/calculate` Route Handler and therefore is not a static-only site.
-
-In the Cloudflare dashboard:
-
-1. Open `Workers & Pages`.
-2. Select `Create application`.
-3. Under `Import a repository`, select `Get started`.
-4. Connect the GitHub account/organization that can read `teplotec/groundloop`.
-5. Select repository `teplotec/groundloop`.
-6. Set the Worker name to `groundloop`.
-7. Set the production branch to `main`.
-8. Set the root directory to `apps/web`.
-9. Keep the production deploy command as `npx wrangler deploy` unless Cloudflare's generated configuration explicitly changes it.
-10. Save and deploy.
-
-If `apps/web` does not yet contain a Wrangler configuration, Workers Builds automatic configuration will detect Next.js and may open a GitHub configuration PR. Review and merge that generated PR before relying on production deploys. The Worker name in the generated Wrangler configuration must remain `groundloop` so it matches the Worker created in the dashboard.
-
-## 4. Configure the backend URL
-
-After the Worker exists:
-
-1. Open `Workers & Pages` -> `groundloop` -> `Settings`.
-2. Open `Variables and Secrets`.
-3. Add a Text variable named `GROUNDLOOP_API_URL`.
-4. Set its value to `https://groundloop-api.teplotec.com`.
-5. Deploy the settings change if Cloudflare prompts for a deployment.
-
-This is not a secret. The browser does not consume it directly; the Next.js Worker uses it when `/api/calculate` proxies a calculation request to FastAPI.
-
-## 5. Enable pull-request previews
-
-In `Workers & Pages` -> `groundloop` -> `Settings` -> `Build` -> `Branch control`:
-
-1. Confirm the production branch is `main`.
-2. Enable `Builds for non-production branches`.
-
-Production branch pushes use the normal deploy command. Non-production branches use the preview deploy command, normally `npx wrangler versions upload`, so they get Worker preview versions without replacing production.
-
-Cloudflare's GitHub integration can post build status and preview URLs on pull requests.
-
-## 6. Add the production custom domain
-
-Only after a Worker preview and the calculation flow are working:
-
-1. Open `Workers & Pages` -> `groundloop`.
-2. Open `Settings` -> `Domains & Routes`.
-3. Select `Add` -> `Custom Domain`.
-4. Enter `groundloop.teplotec.com`.
-5. Select `Add Custom Domain`.
-
-Do not pre-create a CNAME for `groundloop.teplotec.com`. Cloudflare Custom Domains create the required DNS record and certificate automatically, and an existing CNAME can block Custom Domain creation.
-
-## 7. End-to-end verification
-
-Verify in this order:
-
-```bash
-# On the production application host
-curl --fail http://127.0.0.1:8000/health
-
-# Through the Cloudflare Tunnel
-curl --fail https://groundloop-api.teplotec.com/health
-```
-
-Then open the Worker preview URL and run a calculation. Finally open:
+End-to-end frontend:
 
 ```text
 https://groundloop.teplotec.com
 ```
 
-Run the same calculation and confirm the browser receives a valid result through `/api/calculate`.
+Run a calculation and confirm the UI receives a result through `/api/calculate`.
 
-## Updating the API manually
+## Emergency manual fallback
 
-Until automated GroundLoop deployment is introduced:
+If GitHub Actions is unavailable, the restricted deployment helper can still be run over the existing Cloudflare Access SSH path:
 
 ```bash
 ssh teplotec-production-eu-central-helsinki-application-01
-cd /opt/teplotec/groundloop/app
-git pull --ff-only origin main
-docker build -t teplotec-groundloop-api:latest .
-docker rm -f groundloop-api 2>/dev/null || true
-docker run -d \
-  --name groundloop-api \
-  --restart unless-stopped \
-  -p 127.0.0.1:8000:8000 \
-  teplotec-groundloop-api:latest
-curl --fail http://127.0.0.1:8000/health
+sudo /usr/local/sbin/teplotec-groundloop-api-admin deploy
 ```
 
-This manual step is intentionally temporary. A dedicated restricted deployment workflow can replace it after the first production boundary is validated.
+Prefer the GitHub Actions workflow during normal operation so deployment history and production approvals remain visible in one place.
