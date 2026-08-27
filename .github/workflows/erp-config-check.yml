@@ -72,6 +72,17 @@ jobs:
       - name: Compile TEPLOTEC ERP Python
         run: python3 -m compileall -q apps/teplotec_erp/teplotec_erp
 
+      - name: Validate local Frappe CRM patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          patches=(apps/teplotec_erp/teplotec_erp/crm_patches/*.patch)
+          for patch in "${patches[@]}"; do
+            git apply --numstat "$patch" >/dev/null
+            echo "Valid patch: $patch"
+          done
+
       - name: Validate Ukrainian Frappe CRM overlay
         shell: bash
         run: |

@@ -4,6 +4,7 @@ from pathlib import Path
 import frappe
 from frappe.utils import add_days, nowdate
 
+from teplotec_erp.deal_semantics import DISPLAY_TITLE_FIELD, verify_deal_semantics_v1
 from teplotec_erp.qualification import (
     apply_demo_qualification,
     load_demo_qualification_v1,
@@ -22,6 +23,7 @@ def seed_crm_demo_v1():
     """Create or update the curated CRM demo dataset without touching real records."""
     _require_crm()
     verify_sales_qualification_v1()
+    verify_deal_semantics_v1()
     data = _load_dataset()
     qualification_data = load_demo_qualification_v1()
     qualification_by_email = {row["email"]: row for row in qualification_data["deals"]}
@@ -67,9 +69,10 @@ def seed_crm_demo_v1():
 
 
 def verify_crm_demo_v1():
-    """Verify all version-controlled demo Leads, Deals, and qualification overlays."""
+    """Verify all version-controlled demo Leads, Deals, display titles, and qualification overlays."""
     _require_crm()
     verify_sales_qualification_v1()
+    verify_deal_semantics_v1()
     data = _load_dataset()
     qualification_data = load_demo_qualification_v1()
     qualification_by_email = {row["email"]: row for row in qualification_data["deals"]}
@@ -79,6 +82,7 @@ def verify_crm_demo_v1():
     missing_leads = []
     missing_deals = []
     status_mismatches = []
+    title_mismatches = []
     qualification_mismatches = []
 
     for row in data["leads"]:
@@ -107,6 +111,19 @@ def verify_crm_demo_v1():
                 }
             )
 
+        expected_title = row.get("organization") or " ".join(
+            part for part in (row.get("first_name"), row.get("last_name")) if part
+        )
+        actual_title = deal.get(DISPLAY_TITLE_FIELD)
+        if actual_title != expected_title:
+            title_mismatches.append(
+                {
+                    "id": row["id"],
+                    "actual": actual_title,
+                    "expected": expected_title,
+                }
+            )
+
         qualification_spec = qualification_by_email.get(row["email"])
         if qualification_spec:
             for fieldname, expected in qualification_values(qualification_spec).items():
@@ -125,6 +142,7 @@ def verify_crm_demo_v1():
         missing_leads
         or missing_deals
         or status_mismatches
+        or title_mismatches
         or qualification_mismatches
         or orphan_qualification
     ):
@@ -133,6 +151,7 @@ def verify_crm_demo_v1():
             f"missing_leads={missing_leads}, "
             f"missing_deals={missing_deals}, "
             f"status_mismatches={status_mismatches}, "
+            f"title_mismatches={title_mismatches}, "
             f"qualification_mismatches={qualification_mismatches}, "
             f"orphan_qualification={orphan_qualification}"
         )
